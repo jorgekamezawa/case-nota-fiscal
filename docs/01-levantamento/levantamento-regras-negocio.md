@@ -203,7 +203,7 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 - **Recomendação do time:** (a). Um reenvio por falha de rede não pode duplicar a nota. Mesmo `id_pedido` com conteúdo diferente é rejeitado.
 - **Pergunta extra:** o `id_pedido` é único no geral ou só dentro de cada sistema de origem?
 - **Resposta do PO:** Opção (a).
-  - O reenvio devolve a mesma nota (mesmo identificador e mesma data) e não aciona de novo estoque, entrega e financeiro.
+  - O reenvio devolve a mesma nota (mesmo identificador e mesma data) e não aciona de novo registro, estoque, entrega e financeiro.
   - Mesmo `id_pedido` com conteúdo diferente é recusado.
   - Se o primeiro envio falhou antes de a nota ser gravada, o reenvio processa normalmente.
   - **Pergunta extra:** o `id_pedido` é único no geral e nunca é reutilizado.
@@ -216,11 +216,11 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 - **Opções:** (a) devolver a nota assim que registrada e acionar os outros 3 em seguida, sem o cliente esperar; (b) manter tudo antes da resposta.
 - **Recomendação do time:** (a). A resposta não traz nenhuma informação desses sistemas, e o pedido deixa de levar até 6,5s. Registrar primeiro garante que nenhum estoque seja baixado para nota inexistente.
 - **Resposta do PO:** Opção (a).
-  - O cliente espera só: validar, calcular, gravar a nota e enviá-la ao Registro. Em seguida recebe a nota.
-  - Estoque, entrega e financeiro são acionados depois da resposta (assíncrono). O serviço acompanha cada acionamento para tentar de novo (Q-11); nenhum pode se perder, mesmo se o serviço cair.
+  - O cliente espera só: validar, calcular e gravar a nota. Em seguida recebe a nota.
+  - Registro, estoque, entrega e financeiro são acionados depois da resposta (assíncrono). O serviço acompanha cada acionamento para tentar de novo (Q-11); nenhum pode se perder, mesmo se o serviço cair.
   - Nenhuma baixa de estoque acontece antes de a nota estar gravada.
   - **Justificativa:** a resposta não traz dado desses sistemas, e o cliente deixa de esperar até 6,5 s.
-  - **Validado com:** donos de estoque, entrega e financeiro (ninguém usa o 200 como prova de que eles concluíram).
+  - **Validado com:** donos de registro, estoque, entrega e financeiro (ninguém usa o 200 como prova de que eles concluíram).
 
 **Q-11. O que acontece se estoque, entrega ou financeiro falhar depois de a nota ser emitida?** (RN-07, depende da Q-10)
 - **Decide:** PO, com os donos de estoque, entrega e financeiro
@@ -232,7 +232,7 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
   - Se a falha persistir, a operação e o dono do sistema ficam sabendo no mesmo dia.
   - Deve ser possível reprocessar só a etapa que falhou, sem emitir outra nota.
   - **Justificativa:** o cliente já recebeu a nota; cancelar por falha de outro sistema cria inconsistência maior que o atraso.
-  - **Validado com:** donos de estoque, entrega e financeiro; Risco Operacional.
+  - **Validado com:** donos de registro, estoque, entrega e financeiro; Risco Operacional.
 
 **Q-12. Por quanto tempo um reenvio devolve a mesma nota?** (depende da Q-09)
 - **Decide:** PO, com os donos dos sistemas de origem
@@ -250,7 +250,8 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 - **Opções:** (a) o prazo legal de guarda de documento fiscal (qual?); (b) um prazo menor, se a guarda oficial já é feita por outro sistema (qual?).
 - **Recomendação do time:** confirmar se outro sistema já é o responsável pela guarda oficial. Se for, este serviço guarda só o necessário para reenvio e auditoria, o que reduz os dados pessoais retidos (LGPD).
 - **Resposta do PO:** Opção (a).
-  - Este serviço guarda as notas emitidas por 5 anos, prazo da legislação tributária, e as apaga depois.
+  - Este serviço guarda as notas emitidas por 5 anos, prazo da legislação tributária, contados a partir de 1º de janeiro do ano seguinte à emissão, e as apaga depois.
+  - **Premissa:** a contagem a partir do exercício seguinte segue o CTN, art. 173; é a leitura conservadora.
   - Não há outro sistema identificado como responsável pela guarda oficial; o Registro é só acionado.
   - **Justificativa:** guardar a menos descumpre obrigação fiscal; a LGPD permite reter dado pessoal para cumprir obrigação legal.
   - **Validado com:** Fiscal; Jurídico; DPO.
@@ -270,7 +271,7 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 | Q-07 Validação de entrada | Obrigatórios ampliados; todos os erros juntos, sem dado pessoal | Origens: pedidos hoje aceitos passam a ser recusados; exige aviso prévio |
 | Q-08 Arredondamento | 2 casas, NBR 5891; total = soma arredondada | Origens e financeiro: valores com 2 casas; exige aviso prévio |
 | Q-09 Reenvio | Devolve a mesma nota sem reacionar sistemas | Estoque, entrega e financeiro deixam de receber duplicatas |
-| Q-10 Resposta antes dos sistemas | Gravar e registrar, responder, acionar os outros 3 em seguida | Estoque, entrega e financeiro recebem depois da resposta |
+| Q-10 Resposta antes dos sistemas | Gravar, responder, acionar os 4 sistemas em seguida | Registro, estoque, entrega e financeiro recebem depois da resposta |
 | Q-11 Falha após emissão | Nova tentativa sem duplicar; alerta no mesmo dia; nota mantida | Origens não recebem erro por falha de outro sistema |
 | Q-12 Janela do reenvio | Enquanto a nota estiver guardada (5 anos) | Origens não podem reutilizar `id_pedido` |
 | Q-13 Guarda | Este serviço, 5 anos | Nenhum |

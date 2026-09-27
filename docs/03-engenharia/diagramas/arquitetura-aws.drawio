@@ -34,26 +34,20 @@
 
         <!-- VPC -->
         <mxCell id="vpc" value="VPC" style="points=[];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="480" y="100" width="700" height="820" as="geometry" />
+          <mxGeometry x="480" y="100" width="480" height="820" as="geometry" />
         </mxCell>
 
         <!-- AZ A -->
         <mxCell id="aza" value="Zona de disponibilidade A" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="500" y="140" width="660" height="340" as="geometry" />
+          <mxGeometry x="500" y="140" width="450" height="340" as="geometry" />
         </mxCell>
         <mxCell id="priva" value="Sub-rede privada" style="points=[];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
           <mxGeometry x="660" y="180" width="280" height="270" as="geometry" />
         </mxCell>
-        <mxCell id="isola" value="Sub-rede isolada" style="points=[];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#DD344C;fillColor=#FBE9EB;verticalAlign=top;align=left;spacingLeft=30;fontColor=#DD344C;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="960" y="180" width="180" height="270" as="geometry" />
-        </mxCell>
-        <mxCell id="taska" value="Tarefa ECS Fargate&lt;br&gt;API (+ worker, se a 6.2 confirmar)&lt;br&gt;+ sidecar OTel Collector" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+        <mxCell id="taska" value="Tarefa ECS Fargate&lt;br&gt;API + processamento das filas&lt;br&gt;+ sidecar OTel Collector" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
           <mxGeometry x="770" y="260" width="60" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="dba" value="Persistência&lt;br&gt;&lt;i&gt;tipo pendente (seção 6.2)&lt;/i&gt;" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="260" width="60" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="endpoints" value="VPC endpoints&lt;br&gt;ECR · Logs · Secrets" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.endpoints;" vertex="1" parent="1">
+        <mxCell id="endpoints" value="VPC endpoints&lt;br&gt;ECR · Logs · Secrets · SQS&lt;br&gt;DynamoDB · S3 (gateway)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.endpoints;" vertex="1" parent="1">
           <mxGeometry x="540" y="220" width="50" height="50" as="geometry" />
         </mxCell>
 
@@ -79,19 +73,13 @@
 
         <!-- AZ B -->
         <mxCell id="azb" value="Zona de disponibilidade B" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="500" y="560" width="660" height="340" as="geometry" />
+          <mxGeometry x="500" y="560" width="450" height="340" as="geometry" />
         </mxCell>
         <mxCell id="privb" value="Sub-rede privada" style="points=[];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="1">
           <mxGeometry x="660" y="600" width="280" height="270" as="geometry" />
         </mxCell>
-        <mxCell id="isolb" value="Sub-rede isolada" style="points=[];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=0;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#DD344C;fillColor=#FBE9EB;verticalAlign=top;align=left;spacingLeft=30;fontColor=#DD344C;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="960" y="600" width="180" height="270" as="geometry" />
-        </mxCell>
-        <mxCell id="taskb" value="Tarefa ECS Fargate&lt;br&gt;API (+ worker, se a 6.2 confirmar)&lt;br&gt;+ sidecar OTel Collector" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
+        <mxCell id="taskb" value="Tarefa ECS Fargate&lt;br&gt;API + processamento das filas&lt;br&gt;+ sidecar OTel Collector" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" vertex="1" parent="1">
           <mxGeometry x="770" y="680" width="60" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="dbb" value="Persistência (réplica)&lt;br&gt;&lt;i&gt;pendente (seção 6.2)&lt;/i&gt;" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;opacity=50;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="680" width="60" height="60" as="geometry" />
         </mxCell>
 
         <!-- Serviços regionais -->
@@ -151,31 +139,15 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="taska" target="dba">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="900" y="290" />
-              <mxPoint x="900" y="275" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="e9" value="nota + tarefas (endpoint de gateway)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="taska" target="ddb">
+          <mxGeometry x="-0.1" y="-12" relative="1" as="geometry"><Array as="points"><mxPoint x="900" y="290" /><mxPoint x="900" y="245" /></Array><mxPoint as="offset" /></mxGeometry>
+        
         </mxCell>
-        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="taskb" target="dba">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="950" y="710" />
-              <mxPoint x="950" y="305" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="taskb" target="ddb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="970" y="695" /><mxPoint x="970" y="275" /></Array></mxGeometry>
+        
         </mxCell>
-        <mxCell id="e13" value="replicação" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="dba" target="dbb">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1120" y="290" />
-              <mxPoint x="1120" y="710" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="e11" value="registro (síncrono) e integrações" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="taska" target="sistemas">
+        <mxCell id="e11" value="integrações (assíncronas, a partir das filas)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="taska" target="sistemas">
           <mxGeometry x="-0.45" relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="800" y="120" />
@@ -192,6 +164,24 @@
               <mxPoint x="1560" y="930" />
             </Array>
           </mxGeometry>
+        </mxCell>
+        <mxCell id="e15" value="Streams" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="ddb" target="pipes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;" edge="1" parent="1" source="pipes" target="sqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ddb" value="DynamoDB&lt;br&gt;notas + tarefas&lt;br&gt;&lt;i&gt;várias zonas, expurgo por TTL&lt;/i&gt;" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="230" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pipes" value="Streams + EventBridge Pipes&lt;br&gt;&lt;i&gt;um Pipe por sistema&lt;/i&gt;" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="430" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sqs" value="SQS&lt;br&gt;fila + DLQ por sistema" style="sketch=0;points=[];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;labelBackgroundColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="620" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="as duas tarefas ECS consomem as filas" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.9;entryDx=0;entryDy=0;" edge="1" parent="1" source="sqs" target="taskb">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1000" y="650" /><mxPoint x="1000" y="830" /><mxPoint x="900" y="830" /><mxPoint x="900" y="734" /></Array></mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>

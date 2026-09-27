@@ -20,8 +20,8 @@ O que pesa: exposição gradual a tráfego real; rollback por métrica, e não p
 - **Custos:** o deploy dura no mínimo o tempo de observação; com pouco tráfego, a porcentagem do canary pode não gerar amostra suficiente para o alarme.
 - **Passa a ser obrigatório:**
   - o smoke test roda num hook de ciclo de vida do ECS, antes de qualquer tráfego;
-  - os alarmes do rollback são a taxa de 5xx e a latência p99;
+  - os alarmes do rollback são a taxa de 5xx, a latência p99 e a taxa de falha no processamento das filas, por versão;
   - a porcentagem e o tempo de observação são configuração do pipeline, calibrada com o volume real;
   - toda mudança é compatível com a versão anterior durante a convivência das duas.
 
-  Como o processamento em segundo plano e as mudanças de banco se comportam durante o canary depende da seção 6.2 da RFC e fica em aberto.
+  O comportamento do processamento em segundo plano e do banco durante o canary está na seção 6.2 da RFC.
