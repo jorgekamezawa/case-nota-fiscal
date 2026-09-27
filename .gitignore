@@ -34,3 +34,6 @@ build/
 
 ### macOS ###
 .DS_Store
+
+### Windows ###
+*:Zone.Identifier
