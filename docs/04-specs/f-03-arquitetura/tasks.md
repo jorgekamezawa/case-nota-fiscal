@@ -9,41 +9,44 @@ Spec: [spec.md](spec.md). Pacotes do [ADR-0003](../../03-engenharia/adr/0003-arq
 - **Arquivos:** `src/main/resources/paylods/` passa a `src/test/resources/payloads/`; os testes que leem os pedidos de exemplo mudam só o caminho. `<name>` do `pom.xml` de `calculadoratributos` para `geradornotafiscal`.
 
 ### T-02. Domínio
-- **Cobre:** F03-NF-01, F03-NF-02, F03-NF-03, F03-NF-06.
-- **Classes:** objetos do domínio como records, sem anotação de JSON; regras e serviços do domínio como `@Component`, única anotação do Spring permitida.
-  - `p.domain.entity`: `Pedido` e `NotaFiscal`;
-  - `p.domain.valueobject`: `Item`, `ItemNotaFiscal`, `Destinatario`, `Documento`, `Endereco` e os enums;
-  - `p.domain.service.tributacao`: interface `RegraTributacao` e uma classe por regra (`RegraPessoaFisica`, `RegraSimplesNacional`, `RegraLucroReal`, `RegraLucroPresumido`), cada uma com as próprias faixas (E01-RN-11, E01-RN-12); `Tributacao` recebe a lista de regras pelo construtor, escolhe a que se aplica e substitui a `TabelaAliquotas`; `CalculadoraTributo` substitui a `CalculadoraAliquotaProduto` (E01-RN-14);
+- **Cobre:** F03-NF-01, F03-NF-02, F03-NF-03, F03-NF-06, F03-NF-10.
+- **Classes:** sem anotação de JSON; serviços do domínio como `@Component`, única anotação do Spring permitida.
+  - `p.domain.entity`: `Pedido` e `NotaFiscal`, com campos `final`, construtor privado e sem setters. `Pedido.criar` confere as regras de negócio pelas `RegrasDoPedido` e recusa com todas as violações; `NotaFiscal.emitir` gera o identificador novo (E01-RN-17);
+  - `p.domain.valueobject`: `Item`, `ItemNotaFiscal`, `Destinatario`, `Documento`, `Endereco` (records) e os enums;
+  - `p.domain.service.tributacao`: interface `RegraTributacao`, `FaixasDeAliquota` (faixas com teto) e uma classe por regra (`RegraPessoaFisica`, `RegraSimplesNacional`, `RegraLucroReal`, `RegraLucroPresumido`), cada uma com as próprias faixas (E01-RN-11, E01-RN-12); `Tributacao` recebe a lista de regras pelo construtor, escolhe a que se aplica e substitui a `TabelaAliquotas`; `CalculadoraTributo` substitui a `CalculadoraAliquotaProduto` (E01-RN-14);
   - `p.domain.service.frete.CalculadoraFrete` e `p.domain.service.calculo.Arredondamento`, movidas;
-  - `p.domain.service.validacao`: `RegrasDoPedido` confere a etapa 2 (E01-RN-02 a E01-RN-07) e junta todas as violações; `ValidadorDocumento` movido;
+  - `p.domain.service.validacao`: `RegrasDoPedido` confere a etapa 2 (E01-RN-02 a E01-RN-07) e junta todas as violações; `ValidadorDocumento` movido. Os dois são funções puras, chamadas pelo método de fábrica;
   - `p.domain.exception`: `PedidoInvalidoException`, `Violacao` e `MotivoRegra`.
 - **Testes:** domínio sem subir o Spring. Um teste com uma regra fictícia na lista prova que as regras existentes não mudam; outro, com o contexto do Spring, prova que as 4 regras reais são injetadas na lista (F03-NF-02).
 
 ### T-03. Aplicação
 - **Cobre:** F03-NF-01, F03-NF-09.
 - **Classes:**
-  - `p.application.port.in.GerarNotaFiscalUseCase`: recebe o pedido de domínio, já válido na etapa 1;
+  - `p.application.port.in.GerarNotaFiscalUseCase`: recebe o `p.application.port.in.command.GerarNotaFiscalCommand`, com dados que já passaram na etapa 1;
   - `p.application.port.out`: `RegistroPort`, `EstoquePort`, `EntregaPort` e `FinanceiroPort`;
-  - `p.application.usecase.GerarNotaFiscalService` (`@Service`), que substitui a `GeradorNotaFiscalServiceImpl`: confere a etapa 2 pelo domínio, calcula, monta a nota e aciona as portas.
+  - `p.application.usecase.GerarNotaFiscalUseCaseImpl` (`@Service`), que implementa a `GerarNotaFiscalUseCase` e substitui a `GeradorNotaFiscalServiceImpl`: cria o pedido por `Pedido.criar` (etapa 2), calcula, emite a nota por `NotaFiscal.emitir` e aciona as portas.
 - **Testes:** os do serviço atual, com as portas por mock.
 
 ### T-04. Adaptadores
 - **Cobre:** F03-NF-01, F03-NF-04, F03-NF-07, F03-NF-09.
 - **Classes:**
-  - `p.adapter.in.web.controller.GeradorNFController`: só fala com `GerarNotaFiscalUseCase`;
-  - `p.adapter.in.web.dto.request`: `PedidoRequest`, `ItemRequest`, `DestinatarioRequest`, `DocumentoRequest` e `EnderecoRequest`;
+  - `p.adapter.in.web.controller.GeradorNFController`: recebe o `PedidoRequest` com `@Valid` e só fala com `GerarNotaFiscalUseCase`;
+  - `p.adapter.in.web.dto.request`: `PedidoRequest`, `ItemRequest`, `DestinatarioRequest`, `DocumentoRequest` e `EnderecoRequest`, com as anotações de validação de preenchimento e de casas decimais;
   - `p.adapter.in.web.dto.response`: `NotaFiscalResponse`, `ItemNotaFiscalResponse`, `DestinatarioResponse`, `DocumentoResponse`, `EnderecoResponse` e `RespostaProblema`;
-  - `p.adapter.in.web.mappers`: `PedidoMapper` (contrato para domínio) e `NotaFiscalMapper` (domínio para contrato);
-  - `p.adapter.in.web.validacao`: `ValidadorEntrada` (etapa 1: E01-RN-01, E01-RN-08, E01-RN-10), `EntradaInvalidaException` e `MotivoEntrada`;
-  - `p.adapter.in.web.handler.TratadorDeErros`: converte as duas exceções na mesma resposta `pedido-invalido`;
+  - `p.adapter.in.web.mappers`: `PedidoMapper` (contrato para o comando da porta de entrada) e `NotaFiscalMapper` (domínio para contrato);
+  - `p.adapter.in.web.validacao`: anotações próprias (`DuasCasasDecimais`, `RegimeObrigatorioParaPessoaJuridica`), `DataNoFormatoIso` (data só como texto AAAA-MM-DD), `ViolacoesDeEntrada` (converte as violações de anotação e os erros de tipo do Jackson em campos da recusa), `ViolacaoEntrada` e `MotivoEntrada` (etapa 1: E01-RN-01, E01-RN-08, E01-RN-10);
+  - `p.config.JacksonConfig`: desliga a conversão de texto (inclusive vazio) em número, de decimal em inteiro e de número em valor da lista (E01-RN-08);
+  - `p.adapter.in.web.handler.TratadorDeErros`: converte as recusas das duas etapas na mesma resposta `pedido-invalido`;
   - `p.adapter.out.estoque`, `.registro`, `.entrega` e `.financeiro`: um `*Adapter` por sistema, implementando a porta; em `.entrega`, `EntregaAgendamentoCliente` substitui a `EntregaIntegrationPort`. As esperas ficam iguais.
-- **Testes:** controller, contrato e respostas de referência, mudando só imports e caminhos. A tabela dos exemplos de validação roda as duas etapas como a produção; mudam só o exemplo 23 e o caso "sem tipo de pessoa, dígito verificador ainda conferido" (E01-RN-09, E01-RN-10).
+- **Testes:** controller, contrato e respostas de referência, mudando só imports e caminhos. A tabela dos exemplos de validação roda as duas etapas como a produção; mudam só o exemplo 23 e os casos "sem tipo de pessoa, dígito verificador ainda conferido" e "regime inválido sem tipo de pessoa" (E01-RN-09, E01-RN-10).
 
 ### T-05. Teste de arquitetura
 - **Cobre:** F03-NF-01.
-- **Dependência:** ArchUnit (JUnit 5), escopo de teste, última versão estável.
+- **Dependência:** ArchUnit (JUnit 5), escopo de teste, última versão estável. Na T-04, Spring Boot Starter Validation, com versão gerenciada pelo Boot.
 - **Classes:** `p.ArquiteturaTest`:
-  - o domínio só depende de `java..`, do próprio domínio e de `org.springframework.stereotype..`;
+  - o domínio só depende de `java..`, do próprio domínio, de `org.springframework.stereotype..` e do Lombok;
+  - construtor de entidade é privado (F03-NF-10);
+  - a web não depende de `domain.service` (F03-NF-09);
   - a aplicação não depende de `adapter` nem de `config`;
   - os adaptadores não dependem uns dos outros.
 
