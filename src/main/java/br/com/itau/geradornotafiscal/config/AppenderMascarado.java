@@ -9,7 +9,11 @@ import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.spi.AppenderAttachable;
 import ch.qos.logback.core.spi.AppenderAttachableImpl;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Ponto central do mascaramento (F04-NF-05): todo log passa por aqui antes do console e do OTLP.
@@ -25,11 +29,19 @@ public class AppenderMascarado extends AppenderBase<ILoggingEvent> implements Ap
     }
 
     private static boolean precisaMascarar(ILoggingEvent evento) {
-        if (MascaraDadosPessoais.precisaMascarar(evento.getFormattedMessage())) {
+        return MascaraDadosPessoais.precisaMascarar(evento.getFormattedMessage())
+                || precisaMascarar(evento.getThrowableProxy(), Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private static boolean precisaMascarar(IThrowableProxy erro, Set<IThrowableProxy> vistos) {
+        if (erro == null || !vistos.add(erro)) {
+            return false;
+        }
+        if (MascaraDadosPessoais.precisaMascarar(erro.getMessage()) || precisaMascarar(erro.getCause(), vistos)) {
             return true;
         }
-        for (IThrowableProxy erro = evento.getThrowableProxy(); erro != null; erro = erro.getCause()) {
-            if (MascaraDadosPessoais.precisaMascarar(erro.getMessage())) {
+        for (IThrowableProxy suprimida : erro.getSuppressed()) {
+            if (precisaMascarar(suprimida, vistos)) {
                 return true;
             }
         }
@@ -92,22 +104,36 @@ public class AppenderMascarado extends AppenderBase<ILoggingEvent> implements Ap
     }
 
     /**
-     * Cópia da exceção com as mensagens mascaradas, inclusive das causas. A mensagem começa pelo tipo original,
+     * Cópia da exceção com as mensagens mascaradas, inclusive das causas e das suprimidas. A mensagem começa pelo tipo original,
      * que a cópia não tem, e a stack trace é a mesma.
      */
     static final class ExcecaoMascarada extends RuntimeException {
 
-        private ExcecaoMascarada(String mensagem, Throwable causa) {
-            super(mensagem, causa, false, true);
+        private ExcecaoMascarada(String mensagem) {
+            super(mensagem);
         }
 
         static ExcecaoMascarada de(Throwable original) {
-            Throwable causa = original.getCause() == null || original.getCause() == original
-                    ? null : de(original.getCause());
+            return de(original, new IdentityHashMap<>());
+        }
+
+        // As cópias já feitas evitam recursão sem fim quando as causas formam um ciclo.
+        private static ExcecaoMascarada de(Throwable original, Map<Throwable, ExcecaoMascarada> copias) {
+            ExcecaoMascarada existente = copias.get(original);
+            if (existente != null) {
+                return existente;
+            }
             String mensagem = original.getClass().getName()
                     + (original.getMessage() == null ? "" : ": " + MascaraDadosPessoais.mascarar(original.getMessage()));
-            ExcecaoMascarada copia = new ExcecaoMascarada(mensagem, causa);
+            ExcecaoMascarada copia = new ExcecaoMascarada(mensagem);
             copia.setStackTrace(original.getStackTrace());
+            copias.put(original, copia);
+            if (original.getCause() != null && original.getCause() != original) {
+                copia.initCause(de(original.getCause(), copias));
+            }
+            for (Throwable suprimida : original.getSuppressed()) {
+                copia.addSuppressed(de(suprimida, copias));
+            }
             return copia;
         }
     }

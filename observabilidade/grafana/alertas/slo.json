@@ -16,7 +16,7 @@
           "execErrState": "Error",
           "annotations": {
             "summary": "Disponibilidade 99,9% consumindo o orçamento de erro 14.4x acima do sustentável (janelas 1h e 5m).",
-            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Conta só 5xx sobre requisições válidas; 4xx não contam."
           },
           "labels": {
             "servico": "gerador-nota-fiscal",
@@ -67,7 +67,7 @@
           "execErrState": "Error",
           "annotations": {
             "summary": "Disponibilidade 99,9% consumindo o orçamento de erro 6x acima do sustentável (janelas 6h e 30m).",
-            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Conta só 5xx sobre requisições válidas; 4xx não contam."
           },
           "labels": {
             "servico": "gerador-nota-fiscal",

@@ -13,7 +13,6 @@ public class EstoqueAdapter implements EstoquePort {
     private final ObservationRegistry observationRegistry;
     @Override
     public void enviarNotaFiscalParaBaixaEstoque(NotaFiscal notaFiscal) {
-        // Span e métrica de duração da integração (F04-NF-02, F04-NF-07).
         Observation.createNotStarted("integracao", observationRegistry)
                 .lowCardinalityKeyValue("sistema", "estoque")
                 .observe(() -> simularBaixaEstoque(notaFiscal));

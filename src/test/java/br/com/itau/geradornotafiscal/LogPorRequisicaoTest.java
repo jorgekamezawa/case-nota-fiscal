@@ -21,6 +21,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -79,6 +81,17 @@ class LogPorRequisicaoTest {
         enviar("{").andExpect(status().isBadRequest());
 
         assertThat(linha(saida, "Pedido recusado").get("types").toString()).contains("/erros/json-invalido");
+    }
+
+    @Test
+    void f04Nf04_erroInesperadoGeraStackTrace(CapturedOutput saida) throws Exception {
+        doThrow(new IllegalStateException("entrega fora do ar")).when(entregaPort).agendarEntrega(any());
+
+        enviar(PedidoBase.novo().toString()).andExpect(status().isInternalServerError());
+
+        JsonNode erro = linha(saida, "Erro inesperado ao gerar a nota fiscal").get("error");
+        assertThat(erro.get("type").asString()).isEqualTo(IllegalStateException.class.getName());
+        assertThat(erro.get("stack_trace").asString()).contains("entrega fora do ar").contains("\tat ");
     }
 
     private ResultActions enviar(String corpo) throws Exception {

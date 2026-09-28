@@ -17,6 +17,6 @@ class ArquiteturaObservabilidadeTest {
     static final ArchRule f04Nf08_aplicacaoNaoConheceTelemetria = noClasses()
             .that().resideInAPackage("..application..")
             .should().dependOnClassesThat().resideInAnyPackage("io.micrometer..", "io.opentelemetry..",
-                    "org.springframework.boot.actuate..")
+                    "org.springframework.boot.actuate..", "org.slf4j..", "ch.qos.logback..")
             .because("a telemetria fica nos adaptadores e na configuração (F04-NF-08)");
 }

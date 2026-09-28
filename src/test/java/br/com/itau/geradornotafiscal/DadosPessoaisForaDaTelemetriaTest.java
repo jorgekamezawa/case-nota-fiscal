@@ -4,7 +4,9 @@ import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.data.LogRecordData;
@@ -52,7 +54,7 @@ class DadosPessoaisForaDaTelemetriaTest {
 
     private static final String ENDPOINT = "/api/pedido/gerarNotaFiscal";
     private static final List<String> DADOS_PESSOAIS = List.of("Fulano de Tal", "887.403.470-9", "8874034709",
-            PedidoBase.CNPJ, "49695613000180", "Av do Estado");
+            PedidoBase.CNPJ, "49695613000180", "Av do Estado", "03105003");
     private static final InMemorySpanExporter SPANS = InMemorySpanExporter.create();
     private static final InMemoryLogRecordExporter LOGS = InMemoryLogRecordExporter.create();
 
@@ -77,6 +79,8 @@ class DadosPessoaisForaDaTelemetriaTest {
     private SdkTracerProvider tracerProvider;
     @Autowired
     private SdkLoggerProvider loggerProvider;
+    @Autowired
+    private MeterRegistry meterRegistry;
     @MockitoBean
     private EstoquePort estoquePort;
     @MockitoBean
@@ -141,21 +145,46 @@ class DadosPessoaisForaDaTelemetriaTest {
 
     @Test
     void f04Nf03_cadaLinhaComTraceIdESpanId(CapturedOutput saida) throws Exception {
+        ObjectNode recusado = PedidoBase.novo();
+        recusado.put("valor_frete", -1);
         enviar(PedidoBase.novo()).andExpect(status().isOk());
+        enviar(recusado).andExpect(status().isBadRequest());
+        doThrow(new IllegalStateException("falha")).when(entregaPort).agendarEntrega(any());
+        enviar(PedidoBase.novo()).andExpect(status().isInternalServerError());
 
-        List<String> linhasDaRequisicao = saida.getOut().lines().filter(l -> l.contains("Nota fiscal emitida")).toList();
-        assertThat(linhasDaRequisicao).isNotEmpty().allSatisfy(l -> assertThat(l)
-                .containsPattern("\"trace_id\":\"[0-9a-f]{32}\"").containsPattern("\"span_id\":\"[0-9a-f]{16}\""));
+        List<String> mensagens = List.of("Nota fiscal emitida", "Pedido recusado", "Erro inesperado ao gerar a nota fiscal");
+        assertThat(mensagens).allSatisfy(mensagem -> assertThat(saida.getOut().lines()
+                .filter(l -> l.contains("\"message\":\"" + mensagem + "\"")).toList())
+                .isNotEmpty()
+                .allSatisfy(l -> assertThat(l)
+                        .containsPattern("\"trace_id\":\"[0-9a-f]{32}\"").containsPattern("\"span_id\":\"[0-9a-f]{16}\"")));
+    }
+
+    @Test
+    void f04Nf03_f04Nf04_logOtlpComCamposPropriosETrace() throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        pedido.put("id_pedido", 5150);
+
+        enviar(pedido).andExpect(status().isOk());
+
+        LogRecordData log = logsOtlp().stream()
+                .filter(l -> "Nota fiscal emitida".equals(l.getBodyValue().asString()))
+                .findFirst().orElseThrow();
+        assertThat(log.getAttributes().get(AttributeKey.longKey("id_pedido"))).isEqualTo(5150L);
+        assertThat(log.getAttributes().get(AttributeKey.stringKey("id_nota_fiscal"))).isNotBlank();
+        assertThat(log.getSpanContext().isValid()).isTrue();
     }
 
     private void assertSemDadoPessoal(CapturedOutput saida) {
         esvaziar();
         String spans = SPANS.getFinishedSpanItems().toString();
         String logs = logsOtlp().toString();
+        String metricas = meterRegistry.getMeters().stream().map(m -> m.getId().toString()).toList().toString();
         assertThat(DADOS_PESSOAIS).allSatisfy(dado -> {
             assertThat(saida.getOut()).doesNotContain(dado);
             assertThat(spans).doesNotContain(dado);
             assertThat(logs).doesNotContain(dado);
+            assertThat(metricas).doesNotContain(dado);
         });
     }
 

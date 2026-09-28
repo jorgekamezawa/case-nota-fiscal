@@ -15,7 +15,6 @@ public class EntregaAdapter implements EntregaPort {
 
     @Override
     public void agendarEntrega(NotaFiscal notaFiscal) {
-        // Span e métrica de duração da integração (F04-NF-02, F04-NF-07).
         Observation.createNotStarted("integracao", observationRegistry)
                 .lowCardinalityKeyValue("sistema", "entrega")
                 .observe(() -> simularAgendamento(notaFiscal));

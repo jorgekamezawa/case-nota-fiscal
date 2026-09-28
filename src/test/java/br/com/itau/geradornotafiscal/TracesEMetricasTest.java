@@ -3,6 +3,7 @@ package br.com.itau.geradornotafiscal;
 import br.com.itau.geradornotafiscal.adapter.out.entrega.EntregaAgendamentoCliente;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
@@ -114,10 +115,17 @@ class TracesEMetricasTest {
 
     @Test
     void f04Nf06_metricasDasRequisicoesEDaJvm() throws Exception {
+        ObjectNode recusado = PedidoBase.novo();
+        recusado.put("valor_frete", -1);
         enviar(PedidoBase.novo()).andExpect(status().isOk());
+        enviar(recusado).andExpect(status().isBadRequest());
 
-        assertThat(meterRegistry.find("http.server.requests").tag("uri", ENDPOINT).tag("status", "200").timer())
-                .isNotNull();
+        Timer sucesso = meterRegistry.find("http.server.requests").tag("uri", ENDPOINT).tag("status", "200").timer();
+        assertThat(sucesso).isNotNull();
+        assertThat(meterRegistry.find("http.server.requests").tag("uri", ENDPOINT).tag("status", "400").timer()).isNotNull();
+        // Os alertas de latência (F04-NF-11) dependem destes dois limites no histograma.
+        assertThat(sucesso.takeSnapshot().histogramCounts()).extracting(b -> b.bucket(TimeUnit.MILLISECONDS))
+                .contains(800.0, 1500.0);
         assertThat(meterRegistry.find("jvm.memory.used").meters()).isNotEmpty();
     }
 
