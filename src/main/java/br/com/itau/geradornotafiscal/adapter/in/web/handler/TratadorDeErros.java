@@ -4,7 +4,9 @@ import br.com.itau.geradornotafiscal.adapter.in.web.dto.response.RespostaProblem
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacaoEntrada;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacoesDeEntrada;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.ConstraintViolation;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,9 +31,12 @@ import java.util.Optional;
  */
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     private static final String PREFIXO_TYPE = "/erros/";
+
+    private final MeterRegistry meterRegistry;
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException e, HttpHeaders headers,
@@ -49,7 +54,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
                 .toList());
     }
 
-    private static ResponseEntity<Object> entradaInvalida(List<ViolacaoEntrada> violacoes) {
+    private ResponseEntity<Object> entradaInvalida(List<ViolacaoEntrada> violacoes) {
         return pedidoInvalido(violacoes.stream()
                 .map(v -> new RespostaProblema.CampoInvalido(v.campo(), PREFIXO_TYPE + v.motivo().codigo(), v.detalhe()))
                 .toList());
@@ -64,7 +69,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
         return Optional.empty();
     }
 
-    private static ResponseEntity<Object> pedidoInvalido(List<RespostaProblema.CampoInvalido> campos) {
+    private ResponseEntity<Object> pedidoInvalido(List<RespostaProblema.CampoInvalido> campos) {
         return problema(HttpStatus.BAD_REQUEST, "pedido-invalido", "Pedido inválido",
                 "O pedido tem " + campos.size() + " campo(s) inválido(s).", campos);
     }
@@ -87,10 +92,21 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
                 "Erro inesperado ao processar o pedido.", List.of());
     }
 
-    private static ResponseEntity<Object> problema(HttpStatus status, String codigo, String titulo, String detalhe,
+    private ResponseEntity<Object> problema(HttpStatus status, String codigo, String titulo, String detalhe,
                                                    List<RespostaProblema.CampoInvalido> campos) {
+        if (status == HttpStatus.BAD_REQUEST) {
+            contarRecusa(PREFIXO_TYPE + codigo, campos);
+        }
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(new RespostaProblema(PREFIXO_TYPE + codigo, titulo, status.value(), detalhe, campos));
+    }
+
+    // Uma contagem por type distinto dos campos; sem campos (json-invalido), o type geral (F04-NF-07).
+    private void contarRecusa(String typeGeral, List<RespostaProblema.CampoInvalido> campos) {
+        List<String> types = campos.isEmpty()
+                ? List.of(typeGeral)
+                : campos.stream().map(RespostaProblema.CampoInvalido::type).distinct().toList();
+        types.forEach(type -> meterRegistry.counter("recusas", "type", type).increment());
     }
 }

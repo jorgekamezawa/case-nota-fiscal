@@ -7,6 +7,7 @@ import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
 import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,12 +25,14 @@ public class GeradorNFController {
 	private final GerarNotaFiscalUseCase gerarNotaFiscalUseCase;
 	private final PedidoMapper pedidoMapper;
 	private final NotaFiscalMapper notaFiscalMapper;
+	private final MeterRegistry meterRegistry;
 
 	// A etapa 1 da validação (tipo, preenchimento e casas decimais) acontece na conversão e no @Valid (E01-RN-09).
 	@PostMapping("/gerarNotaFiscal")
 	public ResponseEntity<NotaFiscalResponse> gerarNotaFiscal(@Valid @RequestBody PedidoRequest pedido) {
 		GerarNotaFiscalCommand comando = pedidoMapper.paraComando(pedido);
 		NotaFiscal notaFiscal = gerarNotaFiscalUseCase.gerarNotaFiscal(comando);
+		meterRegistry.counter("notas.emitidas").increment();
 		return new ResponseEntity<>(notaFiscalMapper.paraResponse(notaFiscal), HttpStatus.OK);
 	}
 }
