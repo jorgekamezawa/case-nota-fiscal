@@ -78,7 +78,10 @@ class GeradorNFControllerContratoTest {
             "estado", TEXTO,
             "complemento", TEXTO,
             "finalidade", TEXTO,
-            "regiao", TEXTO);
+            "regiao", TEXTO,
+            "bairro", TEXTO,
+            "cidade", TEXTO,
+            "pais", TEXTO);
 
     private static final ObjectMapper LEITOR_EXATO = new ObjectMapper()
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)

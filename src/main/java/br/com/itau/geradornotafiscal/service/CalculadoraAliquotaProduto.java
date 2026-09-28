@@ -16,7 +16,7 @@ public class CalculadoraAliquotaProduto {
         List<ItemNotaFiscal> itemNotaFiscalList = new ArrayList<>();
 
         for (Item item : items) {
-            BigDecimal valorTributo = Arredondamento.duasCasas(item.getValorUnitario().multiply(aliquotaPercentual));
+            BigDecimal valorTributo = Arredondamento.duasCasas(item.getValorUnitario().multiply(BigDecimal.valueOf(item.getQuantidade())).multiply(aliquotaPercentual));
             ItemNotaFiscal itemNotaFiscal = ItemNotaFiscal.builder()
                     .idItem(item.getIdItem())
                     .descricao(item.getDescricao())

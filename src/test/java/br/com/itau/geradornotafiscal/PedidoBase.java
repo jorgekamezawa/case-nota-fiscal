@@ -45,10 +45,26 @@ public final class PedidoBase {
         return pedido;
     }
 
-    /** Troca os itens por um só, com o total declarado acompanhando a soma. */
     public static ObjectNode umItem(ObjectNode pedido, String valorUnitario, int quantidade) {
-        pedido.set("itens", JSON.arrayNode().add(item("1", valorUnitario, quantidade)));
-        pedido.put("valor_total_itens", new BigDecimal(valorUnitario).multiply(BigDecimal.valueOf(quantidade)));
+        return itens(pedido, item("1", valorUnitario, quantidade));
+    }
+
+    /** Troca os itens, com o total declarado acompanhando a soma. */
+    public static ObjectNode itens(ObjectNode pedido, ObjectNode... itens) {
+        ArrayNode lista = JSON.arrayNode();
+        BigDecimal total = BigDecimal.ZERO;
+        for (ObjectNode item : itens) {
+            lista.add(item);
+            total = total.add(item.get("valor_unitario").decimalValue()
+                    .multiply(BigDecimal.valueOf(item.get("quantidade").intValue())));
+        }
+        pedido.set("itens", lista);
+        pedido.put("valor_total_itens", total);
+        return pedido;
+    }
+
+    public static ObjectNode frete(ObjectNode pedido, String valorFrete) {
+        pedido.put("valor_frete", new BigDecimal(valorFrete));
         return pedido;
     }
 
