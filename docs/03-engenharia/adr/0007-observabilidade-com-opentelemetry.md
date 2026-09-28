@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0007: Instrumentar com OpenTelemetry e coletar por um collector sidecar
 

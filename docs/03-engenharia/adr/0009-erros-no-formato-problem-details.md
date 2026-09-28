@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0009: Responder erros no formato Problem Details (RFC 9457)
 

@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0003: Organizar o serviço em arquitetura hexagonal enxuta
 

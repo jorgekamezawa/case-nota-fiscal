@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0002: Usar virtual threads para as esperas de I/O
 

@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0012: Persistir as notas no DynamoDB
 

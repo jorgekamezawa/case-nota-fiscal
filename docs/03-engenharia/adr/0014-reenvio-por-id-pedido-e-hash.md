@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0014: Reconhecer o reenvio pelo id_pedido e por um hash do conteúdo
 

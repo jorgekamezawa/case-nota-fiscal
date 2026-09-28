@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Autor** | PO |
-| **Status** | Em revisão |
+| **Status** | Aprovado; E-01 a E-04 entregues |
 | **Demanda** | [demanda.md](../00-demanda/demanda.md) |
 | **Regras de negócio** | [Levantamento](../01-levantamento/levantamento-regras-negocio.md) |
 | **Plano técnico** | [RFC-0001](../03-engenharia/rfc/0001-modernizacao-gerador-nota-fiscal.md) |

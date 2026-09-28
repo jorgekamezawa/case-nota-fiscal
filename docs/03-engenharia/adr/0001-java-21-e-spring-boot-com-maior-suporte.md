@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0001: Usar Java 21 e a versão estável do Spring Boot com maior janela de suporte
 

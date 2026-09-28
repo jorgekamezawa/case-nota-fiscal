@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) |
 | **Fase** | 1 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Regras de negócio** | [Levantamento](../../01-levantamento/levantamento-regras-negocio.md) |
 
 ## História

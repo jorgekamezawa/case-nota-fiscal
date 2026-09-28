@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Autor** | Jorge Kamezawa |
-| **Status** | Em revisão |
+| **Status** | Aprovada; fases 1 a 5 implementadas |
 | **Revisores** | Tech Lead, Arquitetura, Segurança da Informação, Plataforma / SRE |
-| **Aprovadores** | *a preencher na aprovação* |
-| **Condições da aprovação** | *a preencher na aprovação* |
+| **Aprovadores** | Tech Lead e Arquitetura |
+| **Condições da aprovação** | Cada fase entregue num PR próprio, com build e testes verdes; as fases 6 e 7 começam após as respostas das perguntas T-01 e T-02 (seção 9) |
 | **Regras de negócio** | [Levantamento de regras de negócio](../../01-levantamento/levantamento-regras-negocio.md) |
 | **Diagnóstico detalhado** | [Diagnóstico técnico](../../01-levantamento/diagnostico-tecnico.md) |
 | **Demanda** | [demanda.md](../../00-demanda/demanda.md) |
@@ -26,13 +26,13 @@
 **Caminhos avaliados.**
 - **Só corrigir os defeitos críticos e parar:** o mais rápido, mas mantém a versão sem suporte, a falta de visibilidade e a classe que muda a cada regra; o próximo defeito seria descoberto pelos consumidores de novo.
 - **Reescrever do zero:** permite o desenho ideal, mas congela as correções urgentes até o fim e troca defeitos conhecidos por desconhecidos num serviço fiscal.
-- **Proposto, evolução em 7 fases** (seção 7): corrige primeiro o que atinge os consumidores, na versão atual, e depois moderniza, isola as regras, instrumenta, torna confiável, protege e automatiza a entrega, cada fase entregue e validada separadamente.
+- **Escolhido, evolução em 7 fases** (seção 7): corrige primeiro o que atinge os consumidores, na versão atual, e depois moderniza, isola as regras, instrumenta, torna confiável, protege e automatiza a entrega, cada fase entregue e validada separadamente.
 
 **Principais decisões.** ECS Fargate com deploy canary e rollback automático; autenticação OAuth2 validada na borda e no serviço; observabilidade em OpenTelemetry; DynamoDB, com acionamento das integrações por outbox e filas SQS. Cada decisão tem um ADR com as alternativas descartadas.
 
-**O que pedimos.**
-- Aprovação da direção geral, dos ADRs e das **fases 1 a 7**, para iniciar as specs da fase 1.
-- Acionamento de Segurança da Informação, DPO e Fiscal sobre os riscos 1 e 2 (seção 8).
+**O que foi aprovado.**
+- A direção geral, os ADRs e as **fases 1 a 7**; as fases 1 a 5 estão implementadas, e as fases 6 e 7 seguem planejadas (seção 7).
+- Segurança da Informação, DPO e Fiscal acionados sobre os riscos 1 e 2 (seção 8).
 
 ## 2. Contexto
 

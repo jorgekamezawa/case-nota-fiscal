@@ -1,5 +1,5 @@
 ---
-status: proposto
+status: aceito
 ---
 # ADR-0013: Acionar os sistemas externos por outbox com DynamoDB Streams e filas SQS
 
