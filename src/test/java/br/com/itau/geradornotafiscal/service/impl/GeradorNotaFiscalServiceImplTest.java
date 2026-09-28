@@ -1,5 +1,6 @@
 package br.com.itau.geradornotafiscal.service.impl;
 
+import tools.jackson.databind.json.JsonMapper;
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.model.Item;
 import br.com.itau.geradornotafiscal.model.ItemNotaFiscal;
@@ -8,8 +9,8 @@ import br.com.itau.geradornotafiscal.model.Pedido;
 import br.com.itau.geradornotafiscal.service.CalculadoraAliquotaProduto;
 import br.com.itau.geradornotafiscal.service.frete.CalculadoraFrete;
 import br.com.itau.geradornotafiscal.service.tributacao.TabelaAliquotas;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -57,7 +57,7 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class GeradorNotaFiscalServiceImplTest {
 
-    private static final ObjectMapper OBJECT_MAPPER = Jackson2ObjectMapperBuilder.json().build();
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
     private static final Clock RELOGIO = Clock.fixed(Instant.parse("2026-01-15T15:30:00Z"), SAO_PAULO);
 

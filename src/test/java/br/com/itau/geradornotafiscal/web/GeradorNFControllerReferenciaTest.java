@@ -1,21 +1,22 @@
 package br.com.itau.geradornotafiscal.web;
 
+import tools.jackson.databind.cfg.JsonNodeFeature;
+import tools.jackson.databind.json.JsonMapper;
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.service.impl.EntregaService;
 import br.com.itau.geradornotafiscal.service.impl.EstoqueService;
 import br.com.itau.geradornotafiscal.service.impl.FinanceiroService;
 import br.com.itau.geradornotafiscal.service.impl.RegistroService;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -55,10 +56,11 @@ class GeradorNFControllerReferenciaTest {
     private static final String ENDPOINT = "/api/pedido/gerarNotaFiscal";
     private static final String UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
-    private static final ObjectMapper LEITOR_EXATO = new ObjectMapper()
+    private static final ObjectMapper LEITOR_EXATO = JsonMapper.builder()
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
             .enable(SerializationFeature.INDENT_OUTPUT)
-            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
+            .build();
 
     @TestConfiguration
     static class RelogioFixo {
@@ -126,7 +128,7 @@ class GeradorNFControllerReferenciaTest {
         JsonNode corpo = LEITOR_EXATO.readTree(resposta.getContentAsString(StandardCharsets.UTF_8));
         // O identificador da nota é aleatório: confere o formato e sai da comparação.
         if (corpo.has("id_nota_fiscal")) {
-            assertTrue(corpo.get("id_nota_fiscal").asText().matches(UUID), corpo.get("id_nota_fiscal").asText());
+            assertTrue(corpo.get("id_nota_fiscal").asString().matches(UUID), corpo.get("id_nota_fiscal").asString());
             ((ObjectNode) corpo).put("id_nota_fiscal", "<uuid>");
         }
         registro.set("corpo", corpo);

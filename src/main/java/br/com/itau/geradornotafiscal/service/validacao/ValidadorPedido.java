@@ -5,7 +5,7 @@ import br.com.itau.geradornotafiscal.model.RegimeTributacaoPJ;
 import br.com.itau.geradornotafiscal.model.Regiao;
 import br.com.itau.geradornotafiscal.model.TipoDocumento;
 import br.com.itau.geradornotafiscal.model.TipoPessoa;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -64,7 +64,7 @@ public class ValidadorPedido {
     }
 
     private static void data(JsonNode data, List<Violacao> violacoes) {
-        if (!ausente(data) && !(data.isTextual() && dataValida(data.asText()))) {
+        if (!ausente(data) && !(data.isString() && dataValida(data.asString()))) {
             violacoes.add(new Violacao("data", Motivo.FORMATO_INVALIDO));
         }
     }
@@ -191,9 +191,9 @@ public class ValidadorPedido {
     private void numeroDocumento(JsonNode numero, String caminho, Optional<TipoDocumento> tipo, List<Violacao> violacoes) {
         if (ausente(numero)) {
             violacoes.add(new Violacao(caminho, Motivo.CAMPO_OBRIGATORIO));
-        } else if (numero.isContainerNode()) {
+        } else if (numero.isContainer()) {
             violacoes.add(new Violacao(caminho, Motivo.FORMATO_INVALIDO));
-        } else if (tipo.isPresent() && !validadorDocumento.valido(tipo.get(), numero.asText())) {
+        } else if (tipo.isPresent() && !validadorDocumento.valido(tipo.get(), numero.asString())) {
             violacoes.add(new Violacao(caminho, Motivo.DOCUMENTO_INVALIDO, tipo.get() + " inválido."));
         }
     }
@@ -259,12 +259,12 @@ public class ValidadorPedido {
             }
             return Optional.empty();
         }
-        if (!valor.isTextual()) {
+        if (!valor.isString()) {
             violacoes.add(new Violacao(caminho, Motivo.FORMATO_INVALIDO));
             return Optional.empty();
         }
         Optional<E> constante = Arrays.stream(tipo.getEnumConstants())
-                .filter(c -> c.name().equals(valor.asText()))
+                .filter(c -> c.name().equals(valor.asString()))
                 .findFirst();
         if (constante.isEmpty()) {
             String aceitos = Arrays.stream(tipo.getEnumConstants()).map(Enum::name).collect(Collectors.joining(", "));
@@ -275,7 +275,7 @@ public class ValidadorPedido {
 
     /** Campo de texto: número e booleano são aceitos como texto, como no contrato atual; objeto e lista, não. */
     private static void texto(JsonNode valor, String caminho, List<Violacao> violacoes) {
-        if (!ausente(valor) && valor.isContainerNode()) {
+        if (!ausente(valor) && valor.isContainer()) {
             violacoes.add(new Violacao(caminho, Motivo.FORMATO_INVALIDO));
         }
     }
