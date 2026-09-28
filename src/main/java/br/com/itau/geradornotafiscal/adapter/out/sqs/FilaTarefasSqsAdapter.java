@@ -6,6 +6,7 @@ import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -26,5 +27,12 @@ public class FilaTarefasSqsAdapter implements FilaTarefasPort {
     public void publicar(Long idPedido, Sistema sistema) {
         ObjectNode mensagem = JSON.createObjectNode().put("id_pedido", idPedido.toString()).put("sistema", sistema.name());
         sqs.sendMessage(envio -> envio.queueUrl(filas.fila(sistema)).messageBody(mensagem.toString()));
+    }
+
+    @Override
+    public int mensagensNaDlq(Sistema sistema) {
+        return Integer.parseInt(sqs.getQueueAttributes(atributos -> atributos.queueUrl(filas.dlq(sistema))
+                        .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES))
+                .attributes().get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES));
     }
 }

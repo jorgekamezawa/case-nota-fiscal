@@ -100,11 +100,11 @@ public class ConsumidorDeTarefas implements SmartLifecycle {
 
     private void concluir(Sistema sistema, Message mensagem, ResultadoTarefa resultado) {
         switch (resultado) {
-            case APAGAR -> apagar(sistema, mensagem);
+            case CONCLUIDA, JA_TERMINADA -> apagar(sistema, mensagem);
             // A mensagem não apagada volta quando vence a visibilidade da fila: é a nova tentativa (E02-NF-05).
-            case MANTER -> { }
+            case NOVA_TENTATIVA, EM_EXECUCAO_POR_OUTRO -> { }
             // O SQS conta recebimentos, não falhas: na 5ª falha o próprio serviço move a mensagem (E02-NF-05).
-            case MOVER_PARA_DLQ -> {
+            case FALHOU -> {
                 sqs.sendMessage(envio -> envio.queueUrl(filas.dlq(sistema)).messageBody(mensagem.body()));
                 apagar(sistema, mensagem);
             }

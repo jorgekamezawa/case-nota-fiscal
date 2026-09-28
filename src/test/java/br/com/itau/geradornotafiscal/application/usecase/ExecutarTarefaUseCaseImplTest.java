@@ -1,6 +1,7 @@
 package br.com.itau.geradornotafiscal.application.usecase;
 
 import br.com.itau.geradornotafiscal.application.port.in.ResultadoTarefa;
+import br.com.itau.geradornotafiscal.application.port.in.TarefaExecutada;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
@@ -75,8 +76,10 @@ class ExecutarTarefaUseCaseImplTest {
         salvarVence();
         when(notaFiscalPersistenciaPort.buscar(ID_PEDIDO)).thenReturn(Optional.of(new NotaGuardada(NOTA, "hash")));
 
-        assertEquals(ResultadoTarefa.APAGAR, useCase.executar(ID_PEDIDO, Sistema.ENTREGA));
+        TarefaExecutada executada = useCase.executar(ID_PEDIDO, Sistema.ENTREGA);
 
+        assertEquals(ResultadoTarefa.CONCLUIDA, executada.resultado());
+        assertEquals(AGORA.minusSeconds(120), executada.pendenteDesde());
         verify(entregaPort).agendarEntrega(NOTA);
         verifyNoInteractions(registroPort, estoquePort, financeiroPort);
         assertEquals(StatusTarefa.CONCLUIDA, ultimaGravada().getStatus());
@@ -90,7 +93,7 @@ class ExecutarTarefaUseCaseImplTest {
         when(notaFiscalPersistenciaPort.buscar(ID_PEDIDO)).thenReturn(Optional.of(new NotaGuardada(NOTA, "hash")));
         doThrow(new IllegalStateException("destinatário Fulano de Tal")).when(estoquePort).enviarNotaFiscalParaBaixaEstoque(NOTA);
 
-        assertEquals(ResultadoTarefa.MANTER, useCase.executar(ID_PEDIDO, Sistema.ESTOQUE));
+        assertEquals(ResultadoTarefa.NOVA_TENTATIVA, useCase.executar(ID_PEDIDO, Sistema.ESTOQUE).resultado());
 
         TarefaIntegracao gravada = ultimaGravada();
         assertEquals(StatusTarefa.PENDENTE, gravada.getStatus());
@@ -110,7 +113,7 @@ class ExecutarTarefaUseCaseImplTest {
         when(notaFiscalPersistenciaPort.buscar(ID_PEDIDO)).thenReturn(Optional.of(new NotaGuardada(NOTA, "hash")));
         doThrow(new IllegalStateException()).when(financeiroPort).enviarNotaFiscalParaContasReceber(NOTA);
 
-        assertEquals(ResultadoTarefa.MOVER_PARA_DLQ, useCase.executar(ID_PEDIDO, Sistema.FINANCEIRO));
+        assertEquals(ResultadoTarefa.FALHOU, useCase.executar(ID_PEDIDO, Sistema.FINANCEIRO).resultado());
         assertEquals(StatusTarefa.FALHOU, ultimaGravada().getStatus());
     }
 
@@ -119,7 +122,7 @@ class ExecutarTarefaUseCaseImplTest {
     void e02Nf04_tarefaTerminada() {
         tarefaGuardada(pendente(Sistema.REGISTRO).pegar(AGORA).concluir());
 
-        assertEquals(ResultadoTarefa.APAGAR, useCase.executar(ID_PEDIDO, Sistema.REGISTRO));
+        assertEquals(ResultadoTarefa.JA_TERMINADA, useCase.executar(ID_PEDIDO, Sistema.REGISTRO).resultado());
 
         verifyNoInteractions(registroPort);
     }
@@ -129,7 +132,7 @@ class ExecutarTarefaUseCaseImplTest {
     void e02Nf04_emExecucaoPorOutro() {
         tarefaGuardada(pendente(Sistema.REGISTRO).pegar(AGORA.minusSeconds(10)));
 
-        assertEquals(ResultadoTarefa.MANTER, useCase.executar(ID_PEDIDO, Sistema.REGISTRO));
+        assertEquals(ResultadoTarefa.EM_EXECUCAO_POR_OUTRO, useCase.executar(ID_PEDIDO, Sistema.REGISTRO).resultado());
 
         verifyNoInteractions(registroPort);
     }
@@ -140,7 +143,7 @@ class ExecutarTarefaUseCaseImplTest {
         tarefaGuardada(pendente(Sistema.REGISTRO));
         when(tarefaIntegracaoPort.salvar(any(), anyLong())).thenReturn(false);
 
-        assertEquals(ResultadoTarefa.MANTER, useCase.executar(ID_PEDIDO, Sistema.REGISTRO));
+        assertEquals(ResultadoTarefa.EM_EXECUCAO_POR_OUTRO, useCase.executar(ID_PEDIDO, Sistema.REGISTRO).resultado());
 
         verifyNoInteractions(registroPort);
     }
@@ -152,7 +155,7 @@ class ExecutarTarefaUseCaseImplTest {
         salvarVence();
         when(notaFiscalPersistenciaPort.buscar(ID_PEDIDO)).thenReturn(Optional.of(new NotaGuardada(NOTA, "hash")));
 
-        assertEquals(ResultadoTarefa.APAGAR, useCase.executar(ID_PEDIDO, Sistema.ENTREGA));
+        assertEquals(ResultadoTarefa.CONCLUIDA, useCase.executar(ID_PEDIDO, Sistema.ENTREGA).resultado());
 
         verify(entregaPort).agendarEntrega(NOTA);
     }

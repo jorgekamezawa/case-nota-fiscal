@@ -167,6 +167,23 @@ class TracesEMetricasTest {
     }
 
     @Test
+    @DisplayName("E02-NF-08: tarefas contadas por sistema e resultado; conclusão medida desde a emissão, com o limite de 5 minutos")
+    void e02Nf08_tarefasPorResultadoETempoDeConclusao() throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        double concluidas = meterRegistry.counter("tarefas", "sistema", "registro", "resultado", "concluida").count();
+        enviar(pedido).andExpect(status().isOk());
+
+        processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), Sistema.REGISTRO);
+        processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), Sistema.REGISTRO);
+
+        assertThat(meterRegistry.counter("tarefas", "sistema", "registro", "resultado", "concluida").count()).isEqualTo(concluidas + 1);
+        assertThat(meterRegistry.counter("tarefas", "sistema", "registro", "resultado", "ja_terminada").count()).isGreaterThanOrEqualTo(1);
+        Timer conclusao = meterRegistry.find("tarefas.conclusao").tag("sistema", "registro").timer();
+        assertThat(conclusao).isNotNull();
+        assertThat(conclusao.takeSnapshot().histogramCounts()).extracting(b -> b.bucket(TimeUnit.MINUTES)).contains(5.0);
+    }
+
+    @Test
     void f04Nf07_recusasPorTypeDistinto() throws Exception {
         ObjectNode doisErrosDeRegra = PedidoBase.novo();
         doisErrosDeRegra.put("valor_frete", -1);

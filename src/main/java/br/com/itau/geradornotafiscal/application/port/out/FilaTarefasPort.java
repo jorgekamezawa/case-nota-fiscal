@@ -8,4 +8,7 @@ import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 public interface FilaTarefasPort {
 
     void publicar(Long idPedido, Sistema sistema);
+
+    /** Mensagens aproximadas na fila de erro do sistema (E02-NF-08). */
+    int mensagensNaDlq(Sistema sistema);
 }

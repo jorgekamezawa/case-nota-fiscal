@@ -42,6 +42,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -124,6 +125,41 @@ class ConsumoDeTarefasTest {
         }
         verify(entregaPort, times(5)).agendarEntrega(daNota(idPedido));
         await().atMost(PRAZO).until(() -> naDlq(Sistema.ENTREGA, idPedido));
+        assertThat(fila.mensagensNaDlq(Sistema.ENTREGA)).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("E02 exemplo 5 (E02-RN-06, E02-NF-11): seguindo o runbook, só a entrega que falhou é reprocessada, sem outra nota")
+    void e02Exemplo5_reprocessamentoPeloRunbook() throws Exception {
+        long idPedido = PedidoBase.novoId();
+        doThrow(new IllegalStateException("entrega fora do ar")).when(entregaPort).agendarEntrega(daNota(idPedido));
+        emitir(idPedido);
+        pipe.transportar();
+        await().atMost(PRAZO).until(() -> statusDa(idPedido, Sistema.ENTREGA) == StatusTarefa.FALHOU);
+        await().atMost(PRAZO).until(() -> naDlq(Sistema.ENTREGA, idPedido));
+        doNothing().when(entregaPort).agendarEntrega(daNota(idPedido));
+
+        // Passo 2 do runbook: a tarefa volta a pendente, com as tentativas zeradas e no índice de pendentes.
+        dynamoDb.updateItem(r -> r.tableName("tarefas_integracao")
+                .key(Map.of("id_pedido", AttributeValue.fromN(Long.toString(idPedido)), "sistema", AttributeValue.fromS("ENTREGA")))
+                .updateExpression("SET #status = :pendente, tentativas = :zero, fatia_pendente = :fatia, pendente_desde = :agora, "
+                        + "versao = versao + :um REMOVE bloqueada_ate")
+                .conditionExpression("#status = :falhou")
+                .expressionAttributeNames(Map.of("#status", "status"))
+                .expressionAttributeValues(Map.of(":pendente", AttributeValue.fromS("PENDENTE"), ":falhou", AttributeValue.fromS("FALHOU"),
+                        ":zero", AttributeValue.fromN("0"), ":um", AttributeValue.fromN("1"),
+                        ":fatia", AttributeValue.fromS("PENDENTE#" + Math.floorMod(idPedido, 10)),
+                        ":agora", AttributeValue.fromN(Long.toString(Instant.now().toEpochMilli())))));
+        // Passo 3 do runbook: a mensagem sai da DLQ e volta à fila do sistema.
+        Message daDlq = await().atMost(PRAZO).until(() -> mensagemNaDlq(Sistema.ENTREGA, idPedido), java.util.Objects::nonNull);
+        sqs.sendMessage(envio -> envio.queueUrl(filas.fila(Sistema.ENTREGA)).messageBody(daDlq.body()));
+        sqs.deleteMessage(exclusao -> exclusao.queueUrl(filas.dlq(Sistema.ENTREGA)).receiptHandle(daDlq.receiptHandle()));
+
+        await().atMost(PRAZO).until(() -> statusDa(idPedido, Sistema.ENTREGA) == StatusTarefa.CONCLUIDA);
+        verify(entregaPort, times(6)).agendarEntrega(daNota(idPedido));
+        verify(registroPort, times(1)).registrarNotaFiscal(daNota(idPedido));
+        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(daNota(idPedido));
+        verify(financeiroPort, times(1)).enviarNotaFiscalParaContasReceber(daNota(idPedido));
     }
 
     @Test
@@ -225,6 +261,11 @@ class ConsumoDeTarefasTest {
         String nota = dynamoDb.getItem(r -> r.tableName("notas")
                 .key(Map.of("id_pedido", AttributeValue.fromN(Long.toString(idPedido))))).item().get("nota").s();
         return JSON.readTree(nota).get("idNotaFiscal").asString();
+    }
+
+    private Message mensagemNaDlq(Sistema sistema, long idPedido) {
+        return sqs.receiveMessage(r -> r.queueUrl(filas.dlq(sistema)).maxNumberOfMessages(10).visibilityTimeout(0)).messages()
+                .stream().filter(m -> m.body().contains("\"" + idPedido + "\"")).findFirst().orElse(null);
     }
 
     private boolean naDlq(Sistema sistema, long idPedido) {

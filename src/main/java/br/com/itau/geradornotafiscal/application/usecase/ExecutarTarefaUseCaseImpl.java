@@ -2,6 +2,7 @@ package br.com.itau.geradornotafiscal.application.usecase;
 
 import br.com.itau.geradornotafiscal.application.port.in.ExecutarTarefaUseCase;
 import br.com.itau.geradornotafiscal.application.port.in.ResultadoTarefa;
+import br.com.itau.geradornotafiscal.application.port.in.TarefaExecutada;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
@@ -31,20 +32,20 @@ public class ExecutarTarefaUseCaseImpl implements ExecutarTarefaUseCase {
     private final FinanceiroPort financeiroPort;
 
     @Override
-    public ResultadoTarefa executar(Long idPedido, Sistema sistema) {
+    public TarefaExecutada executar(Long idPedido, Sistema sistema) {
         Optional<TarefaIntegracao> lida = tarefaIntegracaoPort.buscar(idPedido, sistema);
         // Tarefa terminada ou que não existe mais (expurgo): a mensagem repetida sai da fila.
         if (lida.isEmpty() || lida.get().terminada()) {
-            return ResultadoTarefa.APAGAR;
+            return new TarefaExecutada(ResultadoTarefa.JA_TERMINADA, null);
         }
         TarefaIntegracao tarefa = lida.get();
         // Outro processo está com a tarefa: a mensagem fica para a nova tentativa dele (E02-NF-04).
         if (!tarefa.podeSerPega(relogio.instant())) {
-            return ResultadoTarefa.MANTER;
+            return new TarefaExecutada(ResultadoTarefa.EM_EXECUCAO_POR_OUTRO, tarefa.getPendenteDesde());
         }
         TarefaIntegracao emExecucao = tarefa.pegar(relogio.instant());
         if (!tarefaIntegracaoPort.salvar(emExecucao, tarefa.getVersao())) {
-            return ResultadoTarefa.MANTER;
+            return new TarefaExecutada(ResultadoTarefa.EM_EXECUCAO_POR_OUTRO, tarefa.getPendenteDesde());
         }
 
         TarefaIntegracao depois;
@@ -57,13 +58,14 @@ public class ExecutarTarefaUseCaseImpl implements ExecutarTarefaUseCase {
         }
         // Se o bloqueio venceu e outro processo pegou a tarefa, ele termina: a mensagem fica.
         if (!tarefaIntegracaoPort.salvar(depois, emExecucao.getVersao())) {
-            return ResultadoTarefa.MANTER;
+            return new TarefaExecutada(ResultadoTarefa.EM_EXECUCAO_POR_OUTRO, tarefa.getPendenteDesde());
         }
-        return switch (depois.getStatus()) {
-            case CONCLUIDA -> ResultadoTarefa.APAGAR;
-            case FALHOU -> ResultadoTarefa.MOVER_PARA_DLQ;
-            case PENDENTE, EM_EXECUCAO -> ResultadoTarefa.MANTER;
+        ResultadoTarefa resultado = switch (depois.getStatus()) {
+            case CONCLUIDA -> ResultadoTarefa.CONCLUIDA;
+            case FALHOU -> ResultadoTarefa.FALHOU;
+            case PENDENTE, EM_EXECUCAO -> ResultadoTarefa.NOVA_TENTATIVA;
         };
+        return new TarefaExecutada(resultado, tarefa.getPendenteDesde());
     }
 
     private NotaFiscal notaDoPedido(Long idPedido) {

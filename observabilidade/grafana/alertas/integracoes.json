@@ -1,0 +1,221 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "integracoes-gerador-nota-fiscal",
+      "folder": "Gerador de nota fiscal",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "integracoes-dlq",
+          "title": "Mensagem na fila de erro de uma integração",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Tarefa do sistema {{ $labels.sistema }} falhou 5 vezes e está na DLQ; a nota foi mantida.",
+            "descricao": "Falha persistente: a operação e o dono do sistema precisam saber no mesmo dia (E02-RN-05). Reprocessar pelo runbook, dentro dos 14 dias da DLQ.",
+            "runbook": "docs/03-engenharia/runbooks/reprocessamento.md"
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "integracao": "dlq"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max by (sistema) (fila_dlq_mensagens{service_name=\"gerador-nota-fiscal\"})",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "integracoes-tarefa-parada",
+          "title": "Tarefa de integração pendente há mais de 15 minutos",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "A tarefa mais antiga do sistema {{ $labels.sistema }} está aberta há mais de 15 minutos.",
+            "descricao": "Prazo maior que a janela de tentativas: a reconciliação deveria ter recolocado a tarefa (E02-NF-06). Conferir o consumo das filas e o Pipe.",
+            "runbook": "docs/03-engenharia/runbooks/reprocessamento.md"
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "integracao": "tarefa-parada"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max by (sistema) (tarefas_pendente_mais_antiga_seconds{service_name=\"gerador-nota-fiscal\"})",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        900
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "integracoes-slo-conclusao",
+          "title": "Conclusão das integrações abaixo de 99% em até 5 minutos",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Menos de 99% das tarefas concluídas na última hora terminaram em até 5 minutos após a emissão.",
+            "descricao": "SLO de conclusão das integrações (RFC 6.4).",
+            "runbook": "docs/03-engenharia/runbooks/reprocessamento.md"
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "conclusao-integracoes"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "1 - (sum(rate(tarefas_conclusao_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",le=\"300000\"}[1h])) / sum(rate(tarefas_conclusao_milliseconds_count{service_name=\"gerador-nota-fiscal\"}[1h])))",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.01
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "armazenamento-indisponivel",
+          "title": "Armazenamento das notas indisponível",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Falhas de acesso ao DynamoDB nos últimos 5 minutos; pedidos recebendo 503.",
+            "descricao": "Indisponibilidade do banco (E04-NF-04). A prontidão não depende do banco, então as tarefas do ECS não são recicladas.",
+            "runbook": "docs/03-engenharia/runbooks/reprocessamento.md"
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "integracao": "armazenamento"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 3600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(increase(armazenamento_falhas_total{service_name=\"gerador-nota-fiscal\"}[5m]))",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

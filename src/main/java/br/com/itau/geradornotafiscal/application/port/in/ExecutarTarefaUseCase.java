@@ -7,5 +7,5 @@ import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
  */
 public interface ExecutarTarefaUseCase {
 
-    ResultadoTarefa executar(Long idPedido, Sistema sistema);
+    TarefaExecutada executar(Long idPedido, Sistema sistema);
 }
