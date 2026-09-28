@@ -5,6 +5,7 @@ import br.com.itau.geradornotafiscal.model.ItemNotaFiscal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -27,9 +28,9 @@ class CalculadoraAliquotaProdutoTest {
     @Test
     @DisplayName("E01-RN-18: a segunda chamada devolve só os próprios itens")
     void e01Rn18_chamadasSeguidasNaoAcumulamItens() {
-        calculadora.calcularAliquota(itens("primeiro", 1), 0);
+        calculadora.calcularAliquota(itens("primeiro", 1), BigDecimal.ZERO);
 
-        List<ItemNotaFiscal> resultado = calculadora.calcularAliquota(itens("segundo", 1), 0);
+        List<ItemNotaFiscal> resultado = calculadora.calcularAliquota(itens("segundo", 1), BigDecimal.ZERO);
 
         assertEquals(List.of("segundo-0"), ids(resultado));
     }
@@ -45,7 +46,7 @@ class CalculadoraAliquotaProdutoTest {
                 List<Item> itens = itens("pedido" + chamada, 3);
                 resultados.add(executor.submit(() -> {
                     largada.await();
-                    return ids(calculadora.calcularAliquota(itens, 0));
+                    return ids(calculadora.calcularAliquota(itens, BigDecimal.ZERO));
                 }));
             }
             largada.countDown();
@@ -61,7 +62,7 @@ class CalculadoraAliquotaProdutoTest {
 
     private static List<Item> itens(String prefixo, int quantidade) {
         return idsEsperados(prefixo, quantidade).stream()
-                .map(id -> new Item(id, "item", 10, 1))
+                .map(id -> new Item(id, "item", BigDecimal.TEN, 1))
                 .collect(Collectors.toList());
     }
 

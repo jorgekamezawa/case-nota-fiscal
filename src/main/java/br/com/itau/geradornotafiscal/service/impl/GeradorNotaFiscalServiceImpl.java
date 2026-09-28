@@ -3,9 +3,11 @@ package br.com.itau.geradornotafiscal.service.impl;
 import br.com.itau.geradornotafiscal.model.*;
 import br.com.itau.geradornotafiscal.service.CalculadoraAliquotaProduto;
 import br.com.itau.geradornotafiscal.service.GeradorNotaFiscalService;
+import br.com.itau.geradornotafiscal.service.calculo.Arredondamento;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,17 +30,17 @@ public class GeradorNotaFiscalServiceImpl implements GeradorNotaFiscalService{
 		List<ItemNotaFiscal> itemNotaFiscalList = new ArrayList<>();
 
 		if (tipoPessoa == TipoPessoa.FISICA) {
-			double valorTotalItens = pedido.getValorTotalItens();
-			double aliquota;
+			BigDecimal valorTotalItens = pedido.getValorTotalItens();
+			BigDecimal aliquota;
 
-			if (valorTotalItens < 500) {
-				aliquota = 0;
-			} else if (valorTotalItens <= 2000) {
-				aliquota = 0.12;
-			} else if (valorTotalItens <= 3500) {
-				aliquota = 0.15;
+			if (valorTotalItens.compareTo(new BigDecimal("500")) < 0) {
+				aliquota = BigDecimal.ZERO;
+			} else if (valorTotalItens.compareTo(new BigDecimal("2000")) <= 0) {
+				aliquota = new BigDecimal("0.12");
+			} else if (valorTotalItens.compareTo(new BigDecimal("3500")) <= 0) {
+				aliquota = new BigDecimal("0.15");
 			} else {
-				aliquota = 0.17;
+				aliquota = new BigDecimal("0.17");
 			}
 			itemNotaFiscalList = calculadoraAliquotaProduto.calcularAliquota(pedido.getItens(), aliquota);
 		} else if (tipoPessoa == TipoPessoa.JURIDICA) {
@@ -47,45 +49,45 @@ public class GeradorNotaFiscalServiceImpl implements GeradorNotaFiscalService{
 
 			if (regimeTributacao == RegimeTributacaoPJ.SIMPLES_NACIONAL) {
 
-				double valorTotalItens = pedido.getValorTotalItens();
-				double aliquota;
+				BigDecimal valorTotalItens = pedido.getValorTotalItens();
+				BigDecimal aliquota;
 
-				if (valorTotalItens < 1000) {
-					aliquota = 0.03;
-				} else if (valorTotalItens <= 2000) {
-					aliquota = 0.07;
-				} else if (valorTotalItens <= 5000) {
-					aliquota = 0.13;
+				if (valorTotalItens.compareTo(new BigDecimal("1000")) < 0) {
+					aliquota = new BigDecimal("0.03");
+				} else if (valorTotalItens.compareTo(new BigDecimal("2000")) <= 0) {
+					aliquota = new BigDecimal("0.07");
+				} else if (valorTotalItens.compareTo(new BigDecimal("5000")) <= 0) {
+					aliquota = new BigDecimal("0.13");
 				} else {
-					aliquota = 0.19;
+					aliquota = new BigDecimal("0.19");
 				}
 				itemNotaFiscalList = calculadoraAliquotaProduto.calcularAliquota(pedido.getItens(), aliquota);
 			} else if (regimeTributacao == RegimeTributacaoPJ.LUCRO_REAL) {
-				double valorTotalItens = pedido.getValorTotalItens();
-				double aliquota;
+				BigDecimal valorTotalItens = pedido.getValorTotalItens();
+				BigDecimal aliquota;
 
-				if (valorTotalItens < 1000) {
-					aliquota = 0.03;
-				} else if (valorTotalItens <= 2000) {
-					aliquota = 0.09;
-				} else if (valorTotalItens <= 5000) {
-					aliquota = 0.15;
+				if (valorTotalItens.compareTo(new BigDecimal("1000")) < 0) {
+					aliquota = new BigDecimal("0.03");
+				} else if (valorTotalItens.compareTo(new BigDecimal("2000")) <= 0) {
+					aliquota = new BigDecimal("0.09");
+				} else if (valorTotalItens.compareTo(new BigDecimal("5000")) <= 0) {
+					aliquota = new BigDecimal("0.15");
 				} else {
-					aliquota = 0.20;
+					aliquota = new BigDecimal("0.20");
 				}
 				itemNotaFiscalList= calculadoraAliquotaProduto.calcularAliquota(pedido.getItens(),aliquota);
 			} else if (regimeTributacao == RegimeTributacaoPJ.LUCRO_PRESUMIDO) {
-				double valorTotalItens = pedido.getValorTotalItens();
-				double aliquota;
+				BigDecimal valorTotalItens = pedido.getValorTotalItens();
+				BigDecimal aliquota;
 
-				if (valorTotalItens < 1000) {
-					aliquota = 0.03;
-				} else if (valorTotalItens <= 2000) {
-					aliquota = 0.09;
-				} else if (valorTotalItens <= 5000) {
-					aliquota = 0.16;
+				if (valorTotalItens.compareTo(new BigDecimal("1000")) < 0) {
+					aliquota = new BigDecimal("0.03");
+				} else if (valorTotalItens.compareTo(new BigDecimal("2000")) <= 0) {
+					aliquota = new BigDecimal("0.09");
+				} else if (valorTotalItens.compareTo(new BigDecimal("5000")) <= 0) {
+					aliquota = new BigDecimal("0.16");
 				} else {
-					aliquota = 0.20;
+					aliquota = new BigDecimal("0.20");
 				}
 				itemNotaFiscalList = calculadoraAliquotaProduto.calcularAliquota(pedido.getItens(),aliquota);
 			}
@@ -98,19 +100,19 @@ public class GeradorNotaFiscalServiceImpl implements GeradorNotaFiscalService{
 				.findFirst()
 				.orElse(null);
 
-		double valorFrete = pedido.getValorFrete();
-		double valorFreteComPercentual =0;
+		BigDecimal valorFrete = pedido.getValorFrete();
+		BigDecimal valorFreteComPercentual = BigDecimal.ZERO;
 
 		if (regiao == Regiao.NORTE) {
-			valorFreteComPercentual = valorFrete * 1.08;
+			valorFreteComPercentual = Arredondamento.duasCasas(valorFrete.multiply(new BigDecimal("1.08")));
 		} else if (regiao == Regiao.NORDESTE) {
-			valorFreteComPercentual = valorFrete * 1.085;
+			valorFreteComPercentual = Arredondamento.duasCasas(valorFrete.multiply(new BigDecimal("1.085")));
 		} else if (regiao == Regiao.CENTRO_OESTE) {
-			valorFreteComPercentual = valorFrete * 1.07;
+			valorFreteComPercentual = Arredondamento.duasCasas(valorFrete.multiply(new BigDecimal("1.07")));
 		} else if (regiao == Regiao.SUDESTE) {
-			valorFreteComPercentual = valorFrete * 1.048;
+			valorFreteComPercentual = Arredondamento.duasCasas(valorFrete.multiply(new BigDecimal("1.048")));
 		} else if (regiao == Regiao.SUL) {
-			valorFreteComPercentual = valorFrete * 1.06;
+			valorFreteComPercentual = Arredondamento.duasCasas(valorFrete.multiply(new BigDecimal("1.06")));
 		}
 
 		// Create the NotaFiscal object
@@ -119,7 +121,7 @@ public class GeradorNotaFiscalServiceImpl implements GeradorNotaFiscalService{
 		NotaFiscal notaFiscal = NotaFiscal.builder()
 				.idNotaFiscal(idNotaFiscal)
 				.data(LocalDateTime.now())
-				.valorTotalItens(pedido.getValorTotalItens())
+				.valorTotalItens(Arredondamento.duasCasas(pedido.getValorTotalItens()))
 				.valorFrete(valorFreteComPercentual)
 				.itens(itemNotaFiscalList)
 				.destinatario(pedido.getDestinatario())
