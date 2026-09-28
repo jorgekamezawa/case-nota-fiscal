@@ -15,12 +15,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Regras de negócio do pedido, a etapa 2 da E01-RN-09 (E01-RN-02 a E01-RN-07), chamadas por {@code Pedido.criar}.
+ * Regras de negócio do pedido, a etapa 2 da E01-RN-09 (E01-RN-02 a E01-RN-07 e E04-RN-04), chamadas por {@code Pedido.criar}.
  * Recebe só dados que passaram no preenchimento e no formato, e junta todas as violações da etapa antes de recusar.
  */
 public final class RegrasDoPedido {
 
     private static final BigDecimal MAIOR_QUANTIDADE = BigDecimal.valueOf(Integer.MAX_VALUE);
+    // Abaixo do limite de tamanho do armazenamento, com folga, e do de itens da NF-e (E04-RN-04, Q-16).
+    private static final int MAXIMO_DE_ITENS = 800;
 
     private RegrasDoPedido() {
     }
@@ -30,6 +32,9 @@ public final class RegrasDoPedido {
 
         if (valorFrete.signum() < 0) {
             violacoes.add(new Violacao("valor_frete", MotivoRegra.FRETE_NEGATIVO));
+        }
+        if (itens.size() > MAXIMO_DE_ITENS) {
+            violacoes.add(new Violacao("itens", MotivoRegra.ITENS_ACIMA_DO_MAXIMO));
         }
         itensETotal(valorTotalItens, itens, violacoes);
         destinatario(destinatario, violacoes);

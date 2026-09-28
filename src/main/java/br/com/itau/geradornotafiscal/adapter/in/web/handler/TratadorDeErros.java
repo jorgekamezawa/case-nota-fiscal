@@ -3,6 +3,8 @@ package br.com.itau.geradornotafiscal.adapter.in.web.handler;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.response.RespostaProblema;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacaoEntrada;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacoesDeEntrada;
+import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.ConstraintViolation;
@@ -83,6 +85,20 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
         }
         return problema(HttpStatus.BAD_REQUEST, "json-invalido", "Corpo inválido",
                 "O corpo da requisição não é um pedido em JSON válido.", List.of());
+    }
+
+    @ExceptionHandler(NotaGrandeDemaisException.class)
+    public ResponseEntity<Object> notaGrandeDemais(NotaGrandeDemaisException e) {
+        return problema(HttpStatus.BAD_REQUEST, "pedido-grande-demais", "Pedido grande demais",
+                "A nota do pedido passa do tamanho que o serviço consegue guardar.", List.of());
+    }
+
+    // Nada foi guardado: o consumidor pode reenviar o pedido (E04-RN-01, E04-NF-02).
+    @ExceptionHandler(ArmazenamentoIndisponivelException.class)
+    public ResponseEntity<Object> armazenamentoIndisponivel(ArmazenamentoIndisponivelException e) {
+        log.warn("Armazenamento das notas indisponível", e);
+        return problema(HttpStatus.SERVICE_UNAVAILABLE, "servico-indisponivel", "Serviço indisponível",
+                "Não foi possível guardar a nota; tente novamente.", List.of());
     }
 
     @ExceptionHandler(Exception.class)

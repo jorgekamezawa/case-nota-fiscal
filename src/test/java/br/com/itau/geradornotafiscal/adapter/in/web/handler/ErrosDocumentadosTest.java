@@ -25,7 +25,7 @@ class ErrosDocumentadosTest {
         String catalogo = Files.readString(CATALOGO, StandardCharsets.UTF_8);
 
         List<String> naoDocumentados = Stream.concat(
-                        Stream.of("pedido-invalido", "json-invalido", "erro-interno"),
+                        Stream.of("pedido-invalido", "json-invalido", "erro-interno", "pedido-grande-demais", "servico-indisponivel"),
                         Stream.concat(Arrays.stream(MotivoEntrada.values()).map(MotivoEntrada::codigo),
                                 Arrays.stream(MotivoRegra.values()).map(MotivoRegra::codigo)))
                 .filter(codigo -> !catalogo.contains("`/erros/" + codigo + "`"))

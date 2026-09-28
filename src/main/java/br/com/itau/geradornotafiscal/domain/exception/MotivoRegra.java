@@ -14,7 +14,8 @@ public enum MotivoRegra {
     SEM_ENDERECO_DE_ENTREGA("sem-endereco-de-entrega", "Informe ao menos um endereço com finalidade ENTREGA ou COBRANCA_ENTREGA."),
     // Mesmo type do campo obrigatório da etapa 1: a região só é obrigatória no endereço de entrega (E01-RN-06).
     REGIAO_DE_ENTREGA_OBRIGATORIA("campo-obrigatorio", "Endereço de entrega sem região."),
-    TOTAL_DIVERGENTE("total-divergente", "Total dos itens diferente da soma dos itens.");
+    TOTAL_DIVERGENTE("total-divergente", "Total dos itens diferente da soma dos itens."),
+    ITENS_ACIMA_DO_MAXIMO("itens-acima-do-maximo", "O pedido pode ter no máximo 800 linhas de item.");
 
     private final String codigo;
     private final String mensagem;

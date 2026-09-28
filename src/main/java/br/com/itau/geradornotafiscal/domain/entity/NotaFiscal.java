@@ -46,4 +46,16 @@ public final class NotaFiscal {
         return new NotaFiscal(UUID.randomUUID().toString(), data, Arredondamento.duasCasas(pedido.getValorTotalItens()),
                 valorFrete, itens, pedido.getDestinatario());
     }
+
+    /** Remonta a nota já emitida, lida do armazenamento, sem gerar identificador novo (E03-RN-02). */
+    public static NotaFiscal reconstituir(String idNotaFiscal, LocalDateTime data, BigDecimal valorTotalItens,
+                                          BigDecimal valorFrete, List<ItemNotaFiscal> itens, Destinatario destinatario) {
+        Objects.requireNonNull(idNotaFiscal, "idNotaFiscal obrigatório");
+        Objects.requireNonNull(data, "data obrigatória");
+        Objects.requireNonNull(valorTotalItens, "valorTotalItens obrigatório");
+        Objects.requireNonNull(valorFrete, "valorFrete obrigatório");
+        Objects.requireNonNull(itens, "itens obrigatórios");
+        Objects.requireNonNull(destinatario, "destinatario obrigatório");
+        return new NotaFiscal(idNotaFiscal, data, valorTotalItens, valorFrete, itens, destinatario);
+    }
 }

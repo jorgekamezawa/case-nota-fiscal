@@ -89,12 +89,12 @@ class GeradorNFControllerReferenciaTest {
         exemplo22.put("valor_frete", new BigDecimal("-5.00"));
 
         return Stream.of(
-                Arguments.of("sucesso-pf", ENDPOINT, recurso("payloads/teste-pf.json"), false),
-                Arguments.of("sucesso-pj", ENDPOINT, recurso("payloads/teste-pj-simples.json"), false),
-                Arguments.of("sucesso-barra-final", ENDPOINT + "/", recurso("payloads/teste-pf.json"), false),
+                Arguments.of("sucesso-pf", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), false),
+                Arguments.of("sucesso-pj", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pj-simples.json")), false),
+                Arguments.of("sucesso-barra-final", ENDPOINT + "/", PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), false),
                 Arguments.of("recusa-exemplo-22", ENDPOINT, exemplo22.toString(), false),
                 Arguments.of("corpo-nao-json", ENDPOINT, "texto", false),
-                Arguments.of("erro-inesperado", ENDPOINT, recurso("payloads/teste-pf.json"), true));
+                Arguments.of("erro-inesperado", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), true));
     }
 
     @ParameterizedTest(name = "F02-NF-02: {0}")

@@ -1,10 +1,13 @@
 package br.com.itau.geradornotafiscal.adapter.in.web.controller;
 
 import br.com.itau.geradornotafiscal.PedidoBase;
+import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
 import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +28,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
@@ -34,6 +38,7 @@ import static br.com.itau.geradornotafiscal.PedidoBase.item;
 import static br.com.itau.geradornotafiscal.PedidoBase.pj;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,6 +63,9 @@ class GeradorNFControllerTest {
 
     @MockitoSpyBean
     private GerarNotaFiscalUseCase gerarNotaFiscalUseCase;
+
+    @MockitoSpyBean
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
 
     @MockitoBean
     private EstoquePort estoquePort;
@@ -239,6 +247,65 @@ class GeradorNFControllerTest {
         assertFalse(corpo.contains("falha interna"));
         assertFalse(corpo.contains("IllegalStateException"));
         assertFalse(corpo.contains("at br.com"));
+    }
+
+    @Test
+    @DisplayName("E04 exemplo 5 (E04-RN-04): pedido com 800 linhas de item é aceito e guardado")
+    void e04Exemplo5_oitocentasLinhasAceitas() throws Exception {
+        ObjectNode pedido = comLinhas(800);
+
+        enviar(pedido).andExpect(status().isOk()).andExpect(jsonPath("$.itens.length()").value(800));
+
+        verify(notaFiscalPersistenciaPort).guardar(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("E04 exemplo 6 (E04-RN-04): pedido com 801 linhas é recusado no campo itens, sem guardar")
+    void e04Exemplo6_acimaDoMaximoRecusado() throws Exception {
+        enviar(comLinhas(801))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("/erros/pedido-invalido"))
+                .andExpect(jsonPath("$.campos.length()").value(1))
+                .andExpect(jsonPath("$.campos[0].campo").value("itens"))
+                .andExpect(jsonPath("$.campos[0].type").value("/erros/itens-acima-do-maximo"));
+
+        verify(notaFiscalPersistenciaPort, never()).guardar(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("E04 exemplo 4 (E04-RN-01, E04-NF-02): armazenamento indisponível responde 503 sem detalhe interno e não aciona nada")
+    void e04Exemplo4_armazenamentoIndisponivel() throws Exception {
+        doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException("conexão recusada no banco")))
+                .when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any());
+
+        String corpo = enviar(PedidoBase.novo())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("/erros/servico-indisponivel"))
+                .andExpect(jsonPath("$.status").value(503))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertFalse(corpo.contains("conexão recusada"));
+        verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
+    }
+
+    @Test
+    @DisplayName("E04-RN-04, E04-NF-02: nota que não cabe no armazenamento responde 400 pedido-grande-demais, sem campos")
+    void e04Rn04_notaQueNaoCabe() throws Exception {
+        doThrow(new NotaGrandeDemaisException()).when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any());
+
+        enviar(PedidoBase.novo())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("/erros/pedido-grande-demais"))
+                .andExpect(jsonPath("$.campos").doesNotExist());
+
+        verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
+    }
+
+    private static ObjectNode comLinhas(int linhas) {
+        return PedidoBase.itens(PedidoBase.novo(), IntStream.range(0, linhas)
+                .mapToObj(i -> item(Integer.toString(i), "1.00", 1)).toArray(ObjectNode[]::new));
     }
 
     private ResultActions enviar(ObjectNode pedido) throws Exception {

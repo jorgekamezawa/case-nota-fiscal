@@ -5,10 +5,12 @@ import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscal
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import br.com.itau.geradornotafiscal.domain.entity.Pedido;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
+import br.com.itau.geradornotafiscal.domain.service.guarda.PrazoDeGuarda;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.Tributacao;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
@@ -28,6 +30,8 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
     private final CalculadoraTributo calculadoraTributo;
     private final CalculadoraFrete calculadoraFrete;
     private final Clock relogio;
+    private final PrazoDeGuarda prazoDeGuarda;
+    private final NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     private final EstoquePort estoquePort;
     private final RegistroPort registroPort;
     private final EntregaPort entregaPort;
@@ -47,6 +51,9 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
                 calculadoraTributo.calcular(pedido.getItens(), aliquota),
                 calculadoraFrete.calcular(pedido.getValorFrete(), entrega.regiao()),
                 LocalDateTime.now(relogio));
+
+        // Nenhum sistema é acionado antes de a nota estar guardada (E04-RN-01, E02-RN-02).
+        notaFiscalPersistenciaPort.guardar(pedido.getIdPedido(), notaFiscal, prazoDeGuarda.apagarAPartirDe(notaFiscal.getData()));
 
         estoquePort.enviarNotaFiscalParaBaixaEstoque(notaFiscal);
         registroPort.registrarNotaFiscal(notaFiscal);

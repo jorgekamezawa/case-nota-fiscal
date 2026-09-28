@@ -33,11 +33,13 @@ Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o va
 |---|---|---|
 | `/erros/pedido-invalido` | 400 | O pedido tem um ou mais campos inválidos, listados em `campos`. |
 | `/erros/json-invalido` | 400 | O corpo não é JSON válido ou não é um objeto. |
+| `/erros/pedido-grande-demais` | 400 | A nota do pedido passa do tamanho que o serviço consegue guardar; sem `campos` ([E04-RN-04](../04-specs/e-04-guarda-das-notas/spec.md)). Acima de 800 linhas de item, a recusa é o `pedido-invalido` com o motivo `itens-acima-do-maximo`. |
 | `/erros/erro-interno` | 500 | Erro inesperado; sem detalhe interno. |
+| `/erros/servico-indisponivel` | 503 | Não foi possível guardar a nota; nada foi gravado, e o pedido pode ser reenviado ([E04-RN-01](../04-specs/e-04-guarda-das-notas/spec.md)). |
 
 ## Motivos por campo
 
-Usados em `campos[].type`. Regras na [spec E-01](../04-specs/e-01-nota-correta/spec.md).
+Usados em `campos[].type`. Regras nas specs [E-01](../04-specs/e-01-nota-correta/spec.md) e [E-04](../04-specs/e-04-guarda-das-notas/spec.md).
 
 | `type` | Quando | Regra |
 |---|---|---|
@@ -54,3 +56,4 @@ Usados em `campos[].type`. Regras na [spec E-01](../04-specs/e-01-nota-correta/s
 | `/erros/frete-negativo` | `valor_frete` negativo. | E01-RN-05 |
 | `/erros/sem-endereco-de-entrega` | Nenhum endereço com finalidade `ENTREGA` ou `COBRANCA_ENTREGA`. | E01-RN-06 |
 | `/erros/total-divergente` | `valor_total_itens` diferente da soma dos itens; o `detail` traz o declarado e o calculado. | E01-RN-07 |
+| `/erros/itens-acima-do-maximo` | Mais de 800 linhas de item, o máximo por nota. | E04-RN-04 |

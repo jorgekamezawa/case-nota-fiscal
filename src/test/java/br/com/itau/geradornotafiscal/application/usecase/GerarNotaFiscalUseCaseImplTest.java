@@ -4,9 +4,11 @@ import tools.jackson.databind.json.JsonMapper;
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.PedidoRequest;
 import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
+import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import br.com.itau.geradornotafiscal.domain.valueobject.Item;
 import br.com.itau.geradornotafiscal.domain.valueobject.ItemNotaFiscal;
@@ -14,6 +16,7 @@ import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
+import br.com.itau.geradornotafiscal.domain.service.guarda.PrazoDeGuarda;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroPresumido;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroReal;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraPessoaFisica;
@@ -29,11 +32,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -57,11 +62,15 @@ import static br.com.itau.geradornotafiscal.PedidoBase.pj;
 import static br.com.itau.geradornotafiscal.PedidoBase.umItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class GerarNotaFiscalUseCaseImplTest {
@@ -70,6 +79,8 @@ class GerarNotaFiscalUseCaseImplTest {
     private static final ZoneId SAO_PAULO = ZoneId.of("America/Sao_Paulo");
     private static final Clock RELOGIO = Clock.fixed(Instant.parse("2026-01-15T15:30:00Z"), SAO_PAULO);
 
+    @Mock
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @Mock
     private EstoquePort estoquePort;
     @Mock
@@ -85,7 +96,7 @@ class GerarNotaFiscalUseCaseImplTest {
     void setUp() {
         Tributacao tributacao = new Tributacao(List.of(
                 new RegraPessoaFisica(), new RegraSimplesNacional(), new RegraLucroReal(), new RegraLucroPresumido()));
-        service = new GerarNotaFiscalUseCaseImpl(tributacao, new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, estoquePort, registroPort, entregaPort, financeiroPort);
+        service = new GerarNotaFiscalUseCaseImpl(tributacao, new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, new PrazoDeGuarda(), notaFiscalPersistenciaPort, estoquePort, registroPort, entregaPort, financeiroPort);
     }
 
     static Stream<Arguments> exemplosDeCalculo() {
@@ -165,6 +176,30 @@ class GerarNotaFiscalUseCaseImplTest {
         } finally {
             TimeZone.setDefault(fusoDaMaquina);
         }
+    }
+
+    @Test
+    @DisplayName("E04-RN-01, E04-RN-03: a nota é guardada, com a data de expurgo, antes de acionar qualquer sistema")
+    void e04Rn01_guardaAntesDeAcionar() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+
+        NotaFiscal nota = service.gerarNotaFiscal(pedido);
+
+        InOrder ordem = inOrder(notaFiscalPersistenciaPort, estoquePort, registroPort, entregaPort, financeiroPort);
+        ordem.verify(notaFiscalPersistenciaPort).guardar(pedido.idPedido(), nota, LocalDate.of(2032, 1, 1));
+        ordem.verify(estoquePort).enviarNotaFiscalParaBaixaEstoque(nota);
+    }
+
+    @Test
+    @DisplayName("E04-RN-01: se a nota não é guardada, nenhum sistema é acionado")
+    void e04Rn01_semGuardaNadaEAcionado() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+        doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException()))
+                .when(notaFiscalPersistenciaPort).guardar(any(), any(), any());
+
+        assertThrows(ArmazenamentoIndisponivelException.class, () -> service.gerarNotaFiscal(pedido));
+
+        verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
     }
 
     @Test
