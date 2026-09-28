@@ -9,22 +9,22 @@ Spec: [spec.md](spec.md). Pacotes do [ADR-0003](../../03-engenharia/adr/0003-arq
 - **Arquivos:** `src/main/resources/paylods/` passa a `src/test/resources/payloads/`; os testes que leem os pedidos de exemplo mudam só o caminho. `<name>` do `pom.xml` de `calculadoratributos` para `geradornotafiscal`.
 
 ### T-02. Domínio
-- **Cobre:** F03-NF-01, F03-NF-02, F03-NF-03, F03-NF-06.
-- **Classes:** objetos do domínio como records, sem anotação de JSON; regras e serviços do domínio como `@Component`, única anotação do Spring permitida.
-  - `p.domain.entity`: `Pedido` e `NotaFiscal`;
-  - `p.domain.valueobject`: `Item`, `ItemNotaFiscal`, `Destinatario`, `Documento`, `Endereco` e os enums;
+- **Cobre:** F03-NF-01, F03-NF-02, F03-NF-03, F03-NF-06, F03-NF-10.
+- **Classes:** sem anotação de JSON; serviços do domínio como `@Component`, única anotação do Spring permitida.
+  - `p.domain.entity`: `Pedido` e `NotaFiscal`, com campos `final`, construtor privado e sem setters. `Pedido.criar` confere as regras de negócio pelas `RegrasDoPedido` e recusa com todas as violações; `NotaFiscal.emitir` gera o identificador novo (E01-RN-17);
+  - `p.domain.valueobject`: `Item`, `ItemNotaFiscal`, `Destinatario`, `Documento`, `Endereco` (records) e os enums;
   - `p.domain.service.tributacao`: interface `RegraTributacao` e uma classe por regra (`RegraPessoaFisica`, `RegraSimplesNacional`, `RegraLucroReal`, `RegraLucroPresumido`), cada uma com as próprias faixas (E01-RN-11, E01-RN-12); `Tributacao` recebe a lista de regras pelo construtor, escolhe a que se aplica e substitui a `TabelaAliquotas`; `CalculadoraTributo` substitui a `CalculadoraAliquotaProduto` (E01-RN-14);
   - `p.domain.service.frete.CalculadoraFrete` e `p.domain.service.calculo.Arredondamento`, movidas;
-  - `p.domain.service.validacao`: `RegrasDoPedido` confere a etapa 2 (E01-RN-02 a E01-RN-07) e junta todas as violações; `ValidadorDocumento` movido;
+  - `p.domain.service.validacao`: `RegrasDoPedido` confere a etapa 2 (E01-RN-02 a E01-RN-07) e junta todas as violações; `ValidadorDocumento` movido. Os dois são funções puras, chamadas pelo método de fábrica;
   - `p.domain.exception`: `PedidoInvalidoException`, `Violacao` e `MotivoRegra`.
 - **Testes:** domínio sem subir o Spring. Um teste com uma regra fictícia na lista prova que as regras existentes não mudam; outro, com o contexto do Spring, prova que as 4 regras reais são injetadas na lista (F03-NF-02).
 
 ### T-03. Aplicação
 - **Cobre:** F03-NF-01, F03-NF-09.
 - **Classes:**
-  - `p.application.port.in.GerarNotaFiscalUseCase`: recebe o pedido de domínio, já válido na etapa 1;
+  - `p.application.port.in.GerarNotaFiscalUseCase`: recebe o `p.application.port.in.command.GerarNotaFiscalCommand`, com dados que já passaram na etapa 1;
   - `p.application.port.out`: `RegistroPort`, `EstoquePort`, `EntregaPort` e `FinanceiroPort`;
-  - `p.application.usecase.GerarNotaFiscalUseCaseImpl` (`@Service`), que implementa a `GerarNotaFiscalUseCase` e substitui a `GeradorNotaFiscalServiceImpl`: confere a etapa 2 pelo domínio, calcula, monta a nota e aciona as portas.
+  - `p.application.usecase.GerarNotaFiscalUseCaseImpl` (`@Service`), que implementa a `GerarNotaFiscalUseCase` e substitui a `GeradorNotaFiscalServiceImpl`: cria o pedido por `Pedido.criar` (etapa 2), calcula, emite a nota por `NotaFiscal.emitir` e aciona as portas.
 - **Testes:** os do serviço atual, com as portas por mock.
 
 ### T-04. Adaptadores
@@ -33,7 +33,7 @@ Spec: [spec.md](spec.md). Pacotes do [ADR-0003](../../03-engenharia/adr/0003-arq
   - `p.adapter.in.web.controller.GeradorNFController`: só fala com `GerarNotaFiscalUseCase`;
   - `p.adapter.in.web.dto.request`: `PedidoRequest`, `ItemRequest`, `DestinatarioRequest`, `DocumentoRequest` e `EnderecoRequest`;
   - `p.adapter.in.web.dto.response`: `NotaFiscalResponse`, `ItemNotaFiscalResponse`, `DestinatarioResponse`, `DocumentoResponse`, `EnderecoResponse` e `RespostaProblema`;
-  - `p.adapter.in.web.mappers`: `PedidoMapper` (contrato para domínio) e `NotaFiscalMapper` (domínio para contrato);
+  - `p.adapter.in.web.mappers`: `PedidoMapper` (contrato para o comando da porta de entrada) e `NotaFiscalMapper` (domínio para contrato);
   - `p.adapter.in.web.validacao`: `ValidadorEntrada` (etapa 1: E01-RN-01, E01-RN-08, E01-RN-10), `EntradaInvalidaException` e `MotivoEntrada`;
   - `p.adapter.in.web.handler.TratadorDeErros`: converte as duas exceções na mesma resposta `pedido-invalido`;
   - `p.adapter.out.estoque`, `.registro`, `.entrega` e `.financeiro`: um `*Adapter` por sistema, implementando a porta; em `.entrega`, `EntregaAgendamentoCliente` substitui a `EntregaIntegrationPort`. As esperas ficam iguais.

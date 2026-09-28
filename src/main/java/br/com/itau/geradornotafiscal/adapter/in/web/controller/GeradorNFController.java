@@ -6,8 +6,8 @@ import br.com.itau.geradornotafiscal.adapter.in.web.mappers.NotaFiscalMapper;
 import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ValidadorEntrada;
 import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
+import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
-import br.com.itau.geradornotafiscal.domain.entity.Pedido;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,8 +33,8 @@ public class GeradorNFController {
 	@PostMapping("/gerarNotaFiscal")
 	public ResponseEntity<NotaFiscalResponse> gerarNotaFiscal(@RequestBody ObjectNode corpo) {
 		validadorEntrada.validar(corpo);
-		Pedido pedido = pedidoMapper.paraDominio(objectMapper.treeToValue(corpo, PedidoRequest.class));
-		NotaFiscal notaFiscal = gerarNotaFiscalUseCase.gerarNotaFiscal(pedido);
+		GerarNotaFiscalCommand comando = pedidoMapper.paraComando(objectMapper.treeToValue(corpo, PedidoRequest.class));
+		NotaFiscal notaFiscal = gerarNotaFiscalUseCase.gerarNotaFiscal(comando);
 		return new ResponseEntity<>(notaFiscalMapper.paraResponse(notaFiscal), HttpStatus.OK);
 	}
 }

@@ -24,12 +24,12 @@ public class NotaFiscalMapper {
 
     public NotaFiscalResponse paraResponse(NotaFiscal nota) {
         return new NotaFiscalResponse(
-                nota.idNotaFiscal(),
-                nota.data(),
-                nota.valorTotalItens(),
-                nota.valorFrete(),
-                lista(nota.itens(), NotaFiscalMapper::item),
-                destinatario(nota.destinatario()));
+                nota.getIdNotaFiscal(),
+                nota.getData(),
+                nota.getValorTotalItens(),
+                nota.getValorFrete(),
+                lista(nota.getItens(), NotaFiscalMapper::item),
+                destinatario(nota.getDestinatario()));
     }
 
     // A quantidade já foi conferida como inteira (E01-RN-04) e volta como inteiro, como no contrato atual.

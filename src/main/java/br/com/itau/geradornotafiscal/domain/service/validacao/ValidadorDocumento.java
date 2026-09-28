@@ -1,17 +1,18 @@
 package br.com.itau.geradornotafiscal.domain.service.validacao;
 
 import br.com.itau.geradornotafiscal.domain.valueobject.TipoDocumento;
-import org.springframework.stereotype.Component;
 
 /**
  * CPF e CNPJ: limpeza dos caracteres que não são dígitos, tamanho, dígitos iguais e dígito verificador (E01-RN-02).
  */
-@Component
-public class ValidadorDocumento {
+public final class ValidadorDocumento {
 
     private static final int[] PESOS_CNPJ = {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
 
-    public boolean valido(TipoDocumento tipo, String numero) {
+    private ValidadorDocumento() {
+    }
+
+    public static boolean valido(TipoDocumento tipo, String numero) {
         String digitos = numero.replaceAll("\\D", "");
         int tamanho = tipo == TipoDocumento.CPF ? 11 : 14;
         if (digitos.length() != tamanho || digitos.chars().distinct().count() == 1) {

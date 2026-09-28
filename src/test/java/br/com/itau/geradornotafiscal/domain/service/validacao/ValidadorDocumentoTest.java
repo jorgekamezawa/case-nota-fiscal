@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ValidadorDocumentoTest {
 
-    private final ValidadorDocumento validador = new ValidadorDocumento();
-
     @ParameterizedTest(name = "E01-RN-02: {0} {1} válido = {2}")
     @CsvSource({
             "CPF, 887.403.470-95, true",
@@ -27,6 +25,6 @@ class ValidadorDocumentoTest {
             "CNPJ, 887.403.470-95, false"
     })
     void e01Rn02_digitoVerificador(TipoDocumento tipo, String numero, boolean valido) {
-        assertEquals(valido, validador.valido(tipo, numero));
+        assertEquals(valido, ValidadorDocumento.valido(tipo, numero));
     }
 }

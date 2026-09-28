@@ -26,6 +26,7 @@ A fase muda uma regra da [spec E-01](../e-01-nota-correta/spec.md): a recusa pas
 | F03-NF-07 | Esperas simuladas das integrações inalteradas, inclusive a da entrega com 6 linhas de item ou mais. | RFC R-02 |
 | F03-NF-08 | Renomeações restantes do D-18: pedidos de exemplo nos recursos de teste, com o nome da pasta corrigido, fora do pacote de produção; nome do artefato igual ao nome do serviço. | D-18 |
 | F03-NF-09 | Validação em camadas: preenchimento e formato no adaptador de entrada; regras de negócio no domínio, acionadas pela aplicação só com pedido que passou na etapa 1. A aplicação não recebe pedido com formato inválido. | E01-RN-09; ADR-0003 |
+| F03-NF-10 | Entidades do domínio só nascem por métodos de fábrica, que aplicam as regras de negócio delas; não há construtor público. | ADR-0003 |
 
 ### Dependências
 | Item | Uso | Escopo |

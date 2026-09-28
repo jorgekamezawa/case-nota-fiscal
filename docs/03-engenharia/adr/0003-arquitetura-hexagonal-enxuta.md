@@ -21,14 +21,14 @@ O que pesa: regra testável sem infraestrutura; trocar integração ou banco sem
 
 | Pacote | Responsabilidade |
 |---|---|
-| `domain.entity` | Objetos com identidade própria: pedido e nota |
-| `domain.valueobject` | Objetos definidos só pelos valores: item, item da nota, destinatário, documento, endereço e enums |
+| `domain.entity` | Objetos com identidade própria: pedido e nota. Construtor privado; só nascem por métodos de fábrica (ex.: `Pedido.criar`), que aplicam as regras de negócio |
+| `domain.valueobject` | Objetos definidos só pelos valores, como records: item, item da nota, destinatário, documento, endereço e enums |
 | `domain.service.tributacao` | Regras de alíquota, uma classe por tipo de pessoa ou regime, e cálculo do tributo |
 | `domain.service.frete` | Cálculo do frete por região |
-| `domain.service.validacao` | Regras de negócio do pedido |
+| `domain.service.validacao` | Regras de negócio do pedido, chamadas pelo método de fábrica |
 | `domain.service.calculo` | Arredondamento |
 | `domain.exception` | Violações de regra de negócio |
-| `application.port.in` | Caso de uso de geração da nota |
+| `application.port.in` | Caso de uso de geração da nota; o comando de entrada fica em `command` |
 | `application.port.out` | Portas para registro, estoque, entrega, financeiro e persistência |
 | `application.usecase` | Orquestração: confere as regras de negócio, calcula, registra e aciona as integrações |
 | `adapter.in.web.controller` | Controller |

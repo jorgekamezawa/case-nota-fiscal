@@ -4,8 +4,8 @@ import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.PedidoRequest;
 import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
-import br.com.itau.geradornotafiscal.domain.service.validacao.RegrasDoPedido;
-import br.com.itau.geradornotafiscal.domain.service.validacao.ValidadorDocumento;
+import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
+import br.com.itau.geradornotafiscal.domain.entity.Pedido;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -38,7 +38,6 @@ class ValidacaoDoPedidoTest {
     private static final ObjectMapper LEITOR = JsonMapper.builder().build();
 
     private final ValidadorEntrada validadorEntrada = new ValidadorEntrada();
-    private final RegrasDoPedido regrasDoPedido = new RegrasDoPedido(new ValidadorDocumento());
     private final PedidoMapper pedidoMapper = new PedidoMapper();
 
     static Stream<Arguments> exemplosDeValidacao() {
@@ -273,7 +272,9 @@ class ValidacaoDoPedidoTest {
 
     private void validar(ObjectNode pedido) {
         validadorEntrada.validar(pedido);
-        regrasDoPedido.validar(pedidoMapper.paraDominio(PedidoBase.converter(LEITOR, pedido, PedidoRequest.class)));
+        GerarNotaFiscalCommand comando = pedidoMapper.paraComando(PedidoBase.converter(LEITOR, pedido, PedidoRequest.class));
+        Pedido.criar(comando.idPedido(), comando.data(), comando.valorTotalItens(), comando.valorFrete(),
+                comando.itens(), comando.destinatario());
     }
 
     private static List<String> ordenadas(List<String> violacoes) {

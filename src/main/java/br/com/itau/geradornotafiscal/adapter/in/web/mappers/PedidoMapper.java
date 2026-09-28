@@ -5,7 +5,7 @@ import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.DocumentoRequest
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.EnderecoRequest;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.ItemRequest;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.PedidoRequest;
-import br.com.itau.geradornotafiscal.domain.entity.Pedido;
+import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
 import br.com.itau.geradornotafiscal.domain.valueobject.Documento;
 import br.com.itau.geradornotafiscal.domain.valueobject.Endereco;
@@ -17,13 +17,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Contrato de entrada para o domínio. Recebe só pedido que passou na etapa 1 da validação.
+ * Contrato de entrada para o comando da porta de entrada. Recebe só pedido que passou na etapa 1 da validação.
  */
 @Component
 public class PedidoMapper {
 
-    public Pedido paraDominio(PedidoRequest pedido) {
-        return new Pedido(
+    public GerarNotaFiscalCommand paraComando(PedidoRequest pedido) {
+        return new GerarNotaFiscalCommand(
                 pedido.idPedido(),
                 pedido.data(),
                 pedido.valorTotalItens(),

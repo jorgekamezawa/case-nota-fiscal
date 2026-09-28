@@ -11,7 +11,7 @@ import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import br.com.itau.geradornotafiscal.domain.valueobject.Item;
 import br.com.itau.geradornotafiscal.domain.valueobject.ItemNotaFiscal;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
-import br.com.itau.geradornotafiscal.domain.entity.Pedido;
+import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroPresumido;
@@ -19,8 +19,6 @@ import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroReal;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraPessoaFisica;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraSimplesNacional;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.Tributacao;
-import br.com.itau.geradornotafiscal.domain.service.validacao.RegrasDoPedido;
-import br.com.itau.geradornotafiscal.domain.service.validacao.ValidadorDocumento;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,8 +86,7 @@ class GerarNotaFiscalUseCaseImplTest {
     void setUp() {
         Tributacao tributacao = new Tributacao(List.of(
                 new RegraPessoaFisica(), new RegraSimplesNacional(), new RegraLucroReal(), new RegraLucroPresumido()));
-        service = new GerarNotaFiscalUseCaseImpl(new RegrasDoPedido(new ValidadorDocumento()), tributacao,
-                new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, estoquePort, registroPort, entregaPort, financeiroPort);
+        service = new GerarNotaFiscalUseCaseImpl(tributacao, new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, estoquePort, registroPort, entregaPort, financeiroPort);
     }
 
     static Stream<Arguments> exemplosDeCalculo() {
@@ -133,23 +130,23 @@ class GerarNotaFiscalUseCaseImplTest {
     @ParameterizedTest(name = "E01 cálculo {0}")
     @MethodSource("exemplosDeCalculo")
     void e01ExemplosDeCalculo(String exemplo, UnaryOperator<ObjectNode> mudanca, List<String> tributos, String frete) {
-        Pedido pedido = pedido(mudanca.apply(PedidoBase.novo()));
+        GerarNotaFiscalCommand pedido = pedido(mudanca.apply(PedidoBase.novo()));
 
         NotaFiscal nota = service.gerarNotaFiscal(pedido);
 
         if (tributos != null) {
-            assertEquals(tributos, nota.itens().stream()
+            assertEquals(tributos, nota.getItens().stream()
                     .map(item -> String.valueOf(item.valorTributoItem())).collect(Collectors.toList()));
         }
         if (frete != null) {
-            assertEquals(frete, String.valueOf(nota.valorFrete()));
+            assertEquals(frete, String.valueOf(nota.getValorFrete()));
         }
         // E01-RN-17: total e itens como recebidos, na mesma ordem, com 2 casas.
-        assertEquals(pedido.valorTotalItens().setScale(2).toPlainString(), String.valueOf(nota.valorTotalItens()));
-        assertEquals(pedido.itens().size(), nota.itens().size());
+        assertEquals(pedido.valorTotalItens().setScale(2).toPlainString(), String.valueOf(nota.getValorTotalItens()));
+        assertEquals(pedido.itens().size(), nota.getItens().size());
         for (int i = 0; i < pedido.itens().size(); i++) {
             Item recebido = pedido.itens().get(i);
-            ItemNotaFiscal devolvido = nota.itens().get(i);
+            ItemNotaFiscal devolvido = nota.getItens().get(i);
             assertEquals(recebido.idItem(), devolvido.idItem());
             assertEquals(recebido.descricao(), devolvido.descricao());
             assertEquals(recebido.valorUnitario().setScale(2).toPlainString(), String.valueOf(devolvido.valorUnitario()));
@@ -165,7 +162,7 @@ class GerarNotaFiscalUseCaseImplTest {
         try {
             NotaFiscal nota = service.gerarNotaFiscal(pedido(PedidoBase.novo()));
 
-            assertEquals(LocalDateTime.of(2026, 1, 15, 12, 30), nota.data());
+            assertEquals(LocalDateTime.of(2026, 1, 15, 12, 30), nota.getData());
         } finally {
             TimeZone.setDefault(fusoDaMaquina);
         }
@@ -174,7 +171,7 @@ class GerarNotaFiscalUseCaseImplTest {
     @Test
     @DisplayName("E01-NF-05: dez chamadas seguidas do mesmo pedido, a entrega recebe 1 linha de item em cada")
     void e01Nf05_chamadasSeguidasNaoAumentamItensDaEntrega() {
-        Pedido pedido = pedido(PedidoBase.novo());
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
 
         for (int chamada = 0; chamada < 10; chamada++) {
             service.gerarNotaFiscal(pedido);
@@ -182,27 +179,27 @@ class GerarNotaFiscalUseCaseImplTest {
 
         ArgumentCaptor<NotaFiscal> notas = ArgumentCaptor.forClass(NotaFiscal.class);
         verify(entregaPort, times(10)).agendarEntrega(notas.capture());
-        notas.getAllValues().forEach(nota -> assertEquals(1, nota.itens().size()));
+        notas.getAllValues().forEach(nota -> assertEquals(1, nota.getItens().size()));
     }
 
     @Test
     @DisplayName("E01 cálculo #28 (E01-RN-17, E01-RN-18): mesmo pedido duas vezes gera duas notas, cada uma com 1 item")
     void e01Calculo28_mesmoPedidoDuasVezes() {
-        Pedido pedido = pedido(PedidoBase.novo());
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
 
         NotaFiscal primeira = service.gerarNotaFiscal(pedido);
         NotaFiscal segunda = service.gerarNotaFiscal(pedido);
 
-        assertNotEquals(primeira.idNotaFiscal(), segunda.idNotaFiscal());
-        assertEquals(1, primeira.itens().size());
-        assertEquals(1, segunda.itens().size());
+        assertNotEquals(primeira.getIdNotaFiscal(), segunda.getIdNotaFiscal());
+        assertEquals(1, primeira.getItens().size());
+        assertEquals(1, segunda.getItens().size());
     }
 
     @Test
     @DisplayName("E01 cálculo #29 (E01-RN-18): pedido enviado antes da resposta do anterior não mistura itens")
     void e01Calculo29_pedidoEnviadoAntesDaRespostaDoAnterior() throws Exception {
-        Pedido pedidoDeUmItem = pedido(comItens("primeiro", 1));
-        Pedido pedidoDeTresItens = pedido(comItens("segundo", 3));
+        GerarNotaFiscalCommand pedidoDeUmItem = pedido(comItens("primeiro", 1));
+        GerarNotaFiscalCommand pedidoDeTresItens = pedido(comItens("segundo", 3));
         CountDownLatch primeiroEmAndamento = new CountDownLatch(1);
         CountDownLatch segundoConcluido = new CountDownLatch(1);
         doAnswer(invocacao -> {
@@ -234,11 +231,11 @@ class GerarNotaFiscalUseCaseImplTest {
                 .mapToObj(i -> item(prefixo + "-" + i, "50.00", 2)).toArray(ObjectNode[]::new));
     }
 
-    private static Pedido pedido(ObjectNode json) {
-        return new PedidoMapper().paraDominio(PedidoBase.converter(OBJECT_MAPPER, json, PedidoRequest.class));
+    private static GerarNotaFiscalCommand pedido(ObjectNode json) {
+        return new PedidoMapper().paraComando(PedidoBase.converter(OBJECT_MAPPER, json, PedidoRequest.class));
     }
 
     private static List<String> ids(NotaFiscal nota) {
-        return nota.itens().stream().map(item -> item.idItem()).collect(Collectors.toList());
+        return nota.getItens().stream().map(item -> item.idItem()).collect(Collectors.toList());
     }
 }
