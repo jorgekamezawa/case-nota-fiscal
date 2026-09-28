@@ -18,7 +18,7 @@ As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas 
 | 2. Modernização | Java 21 e Spring Boot 4.1 sem mudar comportamento | Concluída | [F-02](docs/04-specs/f-02-modernizacao/spec.md) | [#2](https://github.com/jorgekamezawa/case-nota-fiscal/pull/2) |
 | 3. Arquitetura | Hexagonal: regra nova é código novo | Concluída | [F-03](docs/04-specs/f-03-arquitetura/spec.md) | [#3](https://github.com/jorgekamezawa/case-nota-fiscal/pull/3) |
 | 4. Observabilidade | Logs, métricas, traces e alertas | Concluída | [F-04](docs/04-specs/f-04-observabilidade/spec.md) | [#4](https://github.com/jorgekamezawa/case-nota-fiscal/pull/4) |
-| 5. Confiabilidade | Resposta sem esperar as integrações; nada perdido nem duplicado | Concluída | [E-02](docs/04-specs/e-02-resposta-sem-esperar/spec.md), [E-03](docs/04-specs/e-03-reenvio/spec.md), [E-04](docs/04-specs/e-04-guarda-das-notas/spec.md) | |
+| 5. Confiabilidade | Resposta sem esperar as integrações; nada perdido nem duplicado | Concluída | [E-02](docs/04-specs/e-02-resposta-sem-esperar/spec.md), [E-03](docs/04-specs/e-03-reenvio/spec.md), [E-04](docs/04-specs/e-04-guarda-das-notas/spec.md) | [#5](https://github.com/jorgekamezawa/case-nota-fiscal/pull/5) |
 | 6. Segurança | Só sistemas autorizados emitem nota | Planejada | ADRs 0005 e 0006 | |
 | 7. Entrega | Pipeline completo, Terraform e deploy canary na AWS | Planejada | ADRs 0008 e 0010 | |
 
@@ -35,7 +35,7 @@ As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas 
 - 305 testes, em ordem aleatória a cada execução, no CI de todo PR, com DynamoDB Local e ElasticMQ em container.
 
 **O que ainda falta**
-- **Fase 5, validação na AWS:** o caminho do DynamoDB Streams aos EventBridge Pipes não tem emulador; localmente, o filtro do Pipe é conferido contra eventos reais do emulador, e o Pipe real é validado no ambiente de demonstração da fase 7.
+- **Fase 5, validação na AWS:** o caminho do DynamoDB Streams até as filas, pelos EventBridge Pipes, não tem emulador. Localmente, o filtro do Pipe é conferido contra eventos reais do emulador; o Pipe real é validado no ambiente de demonstração da fase 7.
 - **Fase 5, latência sob carga:** a resposta não espera mais as integrações (0,7 s com 6 linhas de item na primeira chamada após a subida, antes cerca de 6,4 s), mas o teste de carga do p95 abaixo de 800 ms não foi feito nesta fase.
 - **Fase 6:** a API não exige autenticação.
 - **Fase 7:** o CI roda build e testes, mas ainda não há quality gate, imagem, infraestrutura em código nem deploy.
@@ -59,6 +59,7 @@ curl -s -H 'Content-Type: application/json' \
   -d @src/test/resources/payloads/teste-pf.json \
   http://localhost:8080/api/pedido/gerarNotaFiscal
 ```
+Enviar o mesmo arquivo de novo devolve a mesma nota, sem acionar os sistemas outra vez; o mesmo `id_pedido` com outro conteúdo recebe 422.
 
 **Onde ver o resultado**
 - **Saúde:** http://localhost:8080/actuator/health/readiness.
@@ -75,7 +76,7 @@ Antes de propor qualquer mudança, o time executou o código original e mediu o 
 
 - **[Testes manuais com evidências](docs/01-levantamento/evidencias-testes-manuais.md):** 12 cenários com requisição e resposta reais, como itens acumulando entre chamadas, tempo de resposta subindo, nota sem itens para pessoa jurídica, frete zerado sem endereço de entrega, erro 500 genérico e itens perdidos sob concorrência.
 - **[Diagnóstico técnico](docs/01-levantamento/diagnostico-tecnico.md):** 18 defeitos (D-01 a D-18), cada um com causa, evidência e impacto, classificados em 4 críticos, 9 altos, 2 médios e 3 baixos. Separa o que a demanda já informava do que a análise encontrou, como a condição de corrida, a falha parcial sem tratamento, a falta de idempotência e os valores em `double`.
-- **[Levantamento de regras de negócio](docs/01-levantamento/levantamento-regras-negocio.md):** as regras vigentes extraídas do código e 13 perguntas ao PO (Q-01 a Q-13), como "o total declarado deve ser conferido?", "o tributo é por unidade ou pelo total do item?", "o que fazer quando o mesmo pedido chega de novo?" e "por quanto tempo guardar as notas?". Cada resposta registra a decisão e o efeito nos consumidores.
+- **[Levantamento de regras de negócio](docs/01-levantamento/levantamento-regras-negocio.md):** as regras vigentes extraídas do código e 16 perguntas ao PO (Q-01 a Q-16), como "o total declarado deve ser conferido?", "o tributo é por unidade ou pelo total do item?", "o que fazer quando o mesmo pedido chega de novo?" e "por quanto tempo guardar as notas?". Cada resposta registra a decisão e o efeito nos consumidores.
 
 ## Como foi planejado
 
@@ -133,7 +134,7 @@ A IA acelera análise, escrita e implementação; as decisões continuam com pes
 - **Claude Code como par de desenvolvimento:** executou os testes manuais, levantou o diagnóstico, escreveu rascunhos de documentos e implementou as tasks. Todo documento é revisado em blocos antes de ser gravado; toda dependência nova, commit e push passam por aprovação.
 - **Regras que a IA segue** ([`CLAUDE.md`](CLAUDE.md) e [`src/CLAUDE.md`](src/CLAUDE.md)): convenções do projeto e requisitos transversais carregados em toda sessão, como log sem dado pessoal, arquitetura hexagonal, nome do teste com o ID do requisito e dependência só com aprovação. Evitam repetir as mesmas regras em cada spec.
 - **Agente de PO** ([`.claude/agents/product-owner.md`](.claude/agents/product-owner.md)): responde às perguntas de negócio do levantamento com critérios explícitos, nesta ordem: obrigação legal e fiscal, risco para cliente e banco, impacto nos consumidores e valor. Forma a opinião antes de ler a recomendação da engenharia e não decide tecnologia. O time valida e debate cada resposta antes de registrá-la.
-- **Revisores de contexto limpo:** agentes sem o histórico da conversa, só com leitura. Ao fim de cada documento, conferem a coerência com RFC, ADRs, código e convenções; na QA de cada fase, a rastreabilidade. Os achados voltam com uma recomendação e o time decide o que aplicar. Exemplo real da fase 4: o revisor encontrou um CPF que escapava da máscara numa exceção anexada a outra e um ciclo de causas que derrubava o log; os dois viraram teste antes da correção.
+- **Revisores de contexto limpo:** agentes sem o histórico da conversa, só com leitura. Ao fim de cada documento, conferem a coerência com RFC, ADRs, código e convenções; na QA de cada fase, a rastreabilidade. Os achados voltam com uma recomendação e o time decide o que aplicar. Exemplo real da fase 4: o revisor encontrou um CPF que escapava da máscara numa exceção anexada a outra e um ciclo de causas que derrubava o log; os dois viraram teste antes da correção. Na fase 5, o revisor mostrou, na documentação da AWS, que o filtro dos Pipes não aceita o tipo do evento e que a normalização da RFC 8785 perde precisão em números longos; o filtro e o hash foram refeitos antes de qualquer código.
 - **Fontes primárias:** versões e comportamento das bibliotecas conferidos no Maven Central e no código-fonte (por exemplo, a versão do appender de logs compatível com o SDK que o Boot traz), não em suposição.
 
 ## Guia de leitura
@@ -143,6 +144,7 @@ A IA acelera análise, escrita e implementação; as decisões continuam com pes
 - **Problema e regras:** [demanda](docs/00-demanda/demanda.md), [evidências](docs/01-levantamento/evidencias-testes-manuais.md), [diagnóstico](docs/01-levantamento/diagnostico-tecnico.md) e [levantamento](docs/01-levantamento/levantamento-regras-negocio.md).
 - **Arquitetura e decisões:** RFC seções 6 e 7, os ADRs e o spike.
 - **Como uma fase sai do papel:** [spec](docs/04-specs/f-04-observabilidade/spec.md) e [tasks](docs/04-specs/f-04-observabilidade/tasks.md) da fase 4 e o [PR #4](https://github.com/jorgekamezawa/case-nota-fiscal/pull/4), com commits, evidências e revisão.
+- **A fase de maior risco:** as specs [E-02](docs/04-specs/e-02-resposta-sem-esperar/spec.md), [E-03](docs/04-specs/e-03-reenvio/spec.md) e [E-04](docs/04-specs/e-04-guarda-das-notas/spec.md), o [runbook](docs/03-engenharia/runbooks/reprocessamento.md) e o [PR #5](https://github.com/jorgekamezawa/case-nota-fiscal/pull/5), com a prova de queda no meio do processamento e do alerta de falha persistente.
 
 **Mapa**
 
@@ -151,9 +153,10 @@ A IA acelera análise, escrita e implementação; as decisões continuam com pes
 | `docs/00-demanda` | Escopo e restrições recebidos |
 | `docs/01-levantamento` | Evidências, diagnóstico e regras com as decisões do PO |
 | `docs/02-produto` | Épico e entregáveis de negócio |
-| `docs/03-engenharia` | RFC, ADRs, spike e diagramas |
+| `docs/03-engenharia` | RFC, ADRs, spike, runbook e diagramas |
 | `docs/04-specs` | Spec e tasks de cada fase |
 | `docs/api` | Catálogo de erros da API |
 | `observabilidade/grafana` | Dashboard e alertas, os mesmos no local e na nuvem |
+| `infra/pipes` | Filtro e mensagem dos EventBridge Pipes, conferidos nos testes e reusados pelo Terraform |
 | `CLAUDE.md`, `src/CLAUDE.md` | Convenções do projeto |
 | `.claude/agents` | Agente de PO |
