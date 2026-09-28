@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+	<!-- Texto legível só no perfil local; nos demais ambientes, JSON estruturado (F04-NF-03). -->
+	<springProfile name="local">
+		<include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+	</springProfile>
+	<springProfile name="!local">
+		<include resource="org/springframework/boot/logging/logback/structured-console-appender.xml"/>
+	</springProfile>
+
+	<!-- id_pedido e identificador da nota vão como pares chave-valor e viram atributos do log OTLP (F04-NF-04). -->
+	<appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+		<captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+	</appender>
+
+	<!-- Todo log passa pelo mascaramento antes de chegar ao console e ao OTLP (F04-NF-05). -->
+	<appender name="MASCARADO" class="br.com.itau.geradornotafiscal.config.AppenderMascarado">
+		<appender-ref ref="CONSOLE"/>
+		<appender-ref ref="OTEL"/>
+	</appender>
+
+	<root level="INFO">
+		<appender-ref ref="MASCARADO"/>
+	</root>
+</configuration>

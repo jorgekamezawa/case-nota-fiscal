@@ -21,7 +21,7 @@ Spec: [spec.md](spec.md). Base `br.com.itau.geradornotafiscal` (abreviado `p`). 
   - `p.adapter.out.estoque`, `.registro`, `.entrega` e `.financeiro`: cada `*Adapter` envolve a chamada numa observação `integracao`, com rótulo `sistema`, que gera o span e a métrica de duração. As linhas com as esperas não mudam;
   - `p.adapter.in.web.controller.GeradorNFController`: conta `notas.emitidas`;
   - `p.adapter.in.web.handler.TratadorDeErros`: conta `recusas` em cada resposta 400, uma vez por `type` distinto dos campos; sem campos (`json-invalido`), com o `type` geral;
-  - `p.config.ExcecaoSemMensagemNoSpanConfig`: filtro de observação que troca o erro registrado no span por um com o mesmo tipo e sem mensagem (F04-NF-05).
+  - `p.config.ExcecaoSemMensagemNoSpanConfig`: envolve cada exportador de spans e, antes do envio, deixa no evento de exceção só o tipo e tira a descrição do erro (F04-NF-05). Um filtro de observação não serve: ele roda no fim do span, depois de a exceção ser gravada.
 - **Testes:**
   - `traceparent` recebido é continuado; um span por integração; erro marcado no span com a integração falhando por mock do `EntregaAgendamentoCliente`;
   - span com erro não traz a mensagem da exceção;
