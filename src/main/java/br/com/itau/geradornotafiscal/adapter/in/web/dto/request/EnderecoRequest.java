@@ -3,6 +3,7 @@ package br.com.itau.geradornotafiscal.adapter.in.web.dto.request;
 import br.com.itau.geradornotafiscal.domain.valueobject.Finalidade;
 import br.com.itau.geradornotafiscal.domain.valueobject.Regiao;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 
 public record EnderecoRequest(
         @JsonProperty("cep") String cep,
@@ -13,6 +14,6 @@ public record EnderecoRequest(
         @JsonProperty("estado") String estado,
         @JsonProperty("pais") String pais,
         @JsonProperty("complemento") String complemento,
-        @JsonProperty("finalidade") Finalidade finalidade,
+        @JsonProperty("finalidade") @NotNull Finalidade finalidade,
         @JsonProperty("regiao") Regiao regiao) {
 }

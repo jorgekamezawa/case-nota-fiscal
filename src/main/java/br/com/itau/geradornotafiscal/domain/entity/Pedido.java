@@ -8,6 +8,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Pedido de nota fiscal, identificado pelo {@code idPedido}. Só nasce por {@link #criar}, depois das regras de negócio.
@@ -38,6 +39,10 @@ public final class Pedido {
      */
     public static Pedido criar(Long idPedido, LocalDate data, BigDecimal valorTotalItens, BigDecimal valorFrete,
                                List<Item> itens, Destinatario destinatario) {
+        Objects.requireNonNull(valorTotalItens, "valorTotalItens obrigatório");
+        Objects.requireNonNull(valorFrete, "valorFrete obrigatório");
+        Objects.requireNonNull(itens, "itens obrigatórios");
+        Objects.requireNonNull(destinatario, "destinatario obrigatório");
         RegrasDoPedido.validar(valorTotalItens, valorFrete, itens, destinatario);
         return new Pedido(idPedido, data, valorTotalItens, valorFrete, itens, destinatario);
     }

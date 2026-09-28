@@ -8,6 +8,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -38,6 +39,10 @@ public final class NotaFiscal {
      * destinatário como recebido. Itens com tributo, frete e data chegam calculados.
      */
     public static NotaFiscal emitir(Pedido pedido, List<ItemNotaFiscal> itens, BigDecimal valorFrete, LocalDateTime data) {
+        Objects.requireNonNull(pedido, "pedido obrigatório");
+        Objects.requireNonNull(itens, "itens obrigatórios");
+        Objects.requireNonNull(valorFrete, "valorFrete obrigatório");
+        Objects.requireNonNull(data, "data obrigatória");
         return new NotaFiscal(UUID.randomUUID().toString(), data, Arredondamento.duasCasas(pedido.getValorTotalItens()),
                 valorFrete, itens, pedido.getDestinatario());
     }

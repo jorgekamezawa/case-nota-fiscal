@@ -6,7 +6,10 @@ import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.entity.Pedido;
-import tools.jackson.databind.ObjectMapper;
+import br.com.itau.geradornotafiscal.config.JacksonConfig;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
@@ -30,14 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Tabela de exemplos de validação da spec E-01, rodando as duas etapas como a produção (E01-RN-09): preenchimento e
- * formato no adaptador de entrada; regras de negócio no domínio, só quando a etapa 1 passa.
+ * Tabela de exemplos de validação da spec E-01, rodando as duas etapas como a produção (E01-RN-09): na etapa 1, a
+ * conversão do JSON (erros de tipo, um por vez) e as anotações de preenchimento; na etapa 2, as regras de negócio do
+ * domínio, só quando a etapa 1 passa.
  */
 class ValidacaoDoPedidoTest {
 
-    private static final ObjectMapper LEITOR = JsonMapper.builder().build();
+    private static final JsonMapper LEITOR = leitorDaAplicacao();
+    private static final Validator VALIDADOR = Validation.buildDefaultValidatorFactory().getValidator();
 
-    private final ValidadorEntrada validadorEntrada = new ValidadorEntrada();
     private final PedidoMapper pedidoMapper = new PedidoMapper();
 
     static Stream<Arguments> exemplosDeValidacao() {
@@ -131,6 +135,22 @@ class ValidacaoDoPedidoTest {
                 exemplo("id_pedido com decimal (E01-RN-08)", p -> p.put("id_pedido", new BigDecimal("1.5")),
                         "id_pedido:formato-invalido"),
                 exemplo("id_pedido como texto (E01-RN-08)", p -> p.put("id_pedido", "1"), "id_pedido:formato-invalido"),
+                exemplo("data vazia (E01-RN-08)", p -> p.put("data", ""), "data:formato-invalido"),
+                exemplo("data como número (E01-RN-08)", p -> p.put("data", 20220501), "data:formato-invalido"),
+                exemplo("data como lista (E01-RN-08)", p -> {
+                    p.putArray("data").add(2022).add(5).add(1);
+                    return p;
+                }, "data:formato-invalido"),
+                exemplo("id_pedido vazio (E01-RN-08)", p -> p.put("id_pedido", ""), "id_pedido:formato-invalido"),
+                exemplo("valor_frete vazio (E01-RN-08)", p -> p.put("valor_frete", ""), "valor_frete:formato-invalido"),
+                exemplo("quantidade vazia (E01-RN-08)", p -> {
+                    item0(p).put("quantidade", "");
+                    return p;
+                }, "itens[0].quantidade:formato-invalido"),
+                exemplo("tipo de pessoa vazio (E01-RN-08)", p -> {
+                    destinatario(p).put("tipo_pessoa", "");
+                    return p;
+                }, "destinatario.tipo_pessoa:valor-nao-aceito"),
                 exemplo("id_pedido maior que o limite do Long (E01-RN-08)",
                         p -> p.put("id_pedido", new BigInteger("9223372036854775808")), "id_pedido:formato-invalido"),
                 exemplo("quantidade 2.0 é inteira (E01-RN-04)", p -> {
@@ -138,10 +158,10 @@ class ValidacaoDoPedidoTest {
                     return p;
                 }),
                 exemplo("zeros à direita não contam como casas (E01-RN-08)", p -> frete(p, "10.500")),
-                exemplo("regime inválido sem tipo de pessoa ainda é conferido (E01-RN-08, E01-RN-10)", p -> {
+                exemplo("regime inválido sem tipo de pessoa: erro de tipo vem antes, sozinho (E01-RN-08, E01-RN-09)", p -> {
                     destinatario(regime(p, "MEI")).remove("tipo_pessoa");
                     return p;
-                }, "destinatario.tipo_pessoa:campo-obrigatorio", "destinatario.regime_tributacao:valor-nao-aceito"),
+                }, "destinatario.regime_tributacao:valor-nao-aceito"),
                 exemplo("campo de texto com objeto (E01-RN-08)", p -> {
                     destinatario(p).putObject("nome");
                     return p;
@@ -256,13 +276,22 @@ class ValidacaoDoPedidoTest {
     }
 
     private List<String> violacoes(ObjectNode pedido) {
+        PedidoRequest request;
         try {
-            validar(pedido);
-            return List.of();
-        } catch (EntradaInvalidaException e) {
-            return ordenadas(e.violacoes().stream()
+            request = LEITOR.treeToValue(pedido, PedidoRequest.class);
+        } catch (JacksonException e) {
+            ViolacaoEntrada erroDeTipo = ViolacoesDeEntrada.deConversao(e).orElseThrow(() -> e);
+            return List.of(erroDeTipo.campo() + ":" + erroDeTipo.motivo().codigo());
+        }
+        List<ViolacaoEntrada> entrada = ViolacoesDeEntrada.deAnotacoes(VALIDADOR.validate(request));
+        if (!entrada.isEmpty()) {
+            return ordenadas(entrada.stream()
                     .map(v -> v.campo() + ":" + v.motivo().codigo())
                     .collect(Collectors.toList()));
+        }
+        try {
+            criarPedido(request);
+            return List.of();
         } catch (PedidoInvalidoException e) {
             return ordenadas(e.violacoes().stream()
                     .map(v -> v.campo() + ":" + v.motivo().codigo())
@@ -270,11 +299,22 @@ class ValidacaoDoPedidoTest {
         }
     }
 
+    /** Pedido já válido na etapa 1: confere só as regras de negócio (etapa 2). */
     private void validar(ObjectNode pedido) {
-        validadorEntrada.validar(pedido);
-        GerarNotaFiscalCommand comando = pedidoMapper.paraComando(PedidoBase.converter(LEITOR, pedido, PedidoRequest.class));
+        criarPedido(PedidoBase.converter(LEITOR, pedido, PedidoRequest.class));
+    }
+
+    private void criarPedido(PedidoRequest request) {
+        GerarNotaFiscalCommand comando = pedidoMapper.paraComando(request);
         Pedido.criar(comando.idPedido(), comando.data(), comando.valorTotalItens(), comando.valorFrete(),
                 comando.itens(), comando.destinatario());
+    }
+
+    private static JsonMapper leitorDaAplicacao() {
+        JsonMapper.Builder builder = JsonMapper.builder();
+        new JacksonConfig().decimaisExatos().customize(builder);
+        new JacksonConfig().entradaEstrita().customize(builder);
+        return builder.build();
     }
 
     private static List<String> ordenadas(List<String> violacoes) {

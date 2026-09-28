@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Contrato de entrada para o comando da porta de entrada. Recebe só pedido que passou na etapa 1 da validação.
@@ -56,6 +55,6 @@ public class PedidoMapper {
     }
 
     private static <T, R> List<R> lista(List<T> origem, Function<T, R> conversao) {
-        return origem.stream().map(conversao).collect(Collectors.toList());
+        return origem.stream().map(conversao).toList();
     }
 }

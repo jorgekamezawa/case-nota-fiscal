@@ -1,8 +1,10 @@
 package br.com.itau.geradornotafiscal.adapter.in.web.handler;
 
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.response.RespostaProblema;
-import br.com.itau.geradornotafiscal.adapter.in.web.validacao.EntradaInvalidaException;
+import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacaoEntrada;
+import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacoesDeEntrada;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
+import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -10,13 +12,15 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import tools.jackson.core.JacksonException;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * Converte recusas e erros em Problem Details (E01-NF-03). As duas etapas da validação (E01-RN-09) respondem
@@ -29,18 +33,35 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     private static final String PREFIXO_TYPE = "/erros/";
 
-    @ExceptionHandler(EntradaInvalidaException.class)
-    public ResponseEntity<Object> entradaInvalida(EntradaInvalidaException e) {
-        return pedidoInvalido(e.violacoes().stream()
-                .map(v -> new RespostaProblema.CampoInvalido(v.campo(), PREFIXO_TYPE + v.motivo().codigo(), v.detalhe()))
-                .collect(Collectors.toList()));
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException e, HttpHeaders headers,
+                                                                  HttpStatusCode status, WebRequest request) {
+        List<ConstraintViolation<?>> violacoes = e.getBindingResult().getAllErrors().stream()
+                .<ConstraintViolation<?>>map(erro -> erro.unwrap(ConstraintViolation.class))
+                .toList();
+        return entradaInvalida(ViolacoesDeEntrada.deAnotacoes(violacoes));
     }
 
     @ExceptionHandler(PedidoInvalidoException.class)
     public ResponseEntity<Object> regraDeNegocio(PedidoInvalidoException e) {
         return pedidoInvalido(e.violacoes().stream()
                 .map(v -> new RespostaProblema.CampoInvalido(v.campo(), PREFIXO_TYPE + v.motivo().codigo(), v.detalhe()))
-                .collect(Collectors.toList()));
+                .toList());
+    }
+
+    private static ResponseEntity<Object> entradaInvalida(List<ViolacaoEntrada> violacoes) {
+        return pedidoInvalido(violacoes.stream()
+                .map(v -> new RespostaProblema.CampoInvalido(v.campo(), PREFIXO_TYPE + v.motivo().codigo(), v.detalhe()))
+                .toList());
+    }
+
+    private static Optional<JacksonException> erroDoJackson(Throwable erro) {
+        for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
+            if (causa instanceof JacksonException jackson) {
+                return Optional.of(jackson);
+            }
+        }
+        return Optional.empty();
     }
 
     private static ResponseEntity<Object> pedidoInvalido(List<RespostaProblema.CampoInvalido> campos) {
@@ -51,6 +72,10 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException e, HttpHeaders headers,
                                                                   HttpStatusCode status, WebRequest request) {
+        Optional<ViolacaoEntrada> erroDeTipo = erroDoJackson(e).flatMap(ViolacoesDeEntrada::deConversao);
+        if (erroDeTipo.isPresent()) {
+            return entradaInvalida(List.of(erroDeTipo.get()));
+        }
         return problema(HttpStatus.BAD_REQUEST, "json-invalido", "Corpo inválido",
                 "O corpo da requisição não é um pedido em JSON válido.", List.of());
     }

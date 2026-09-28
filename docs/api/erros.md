@@ -10,9 +10,9 @@ Toda resposta de erro de `POST /api/pedido/gerarNotaFiscal` segue o Problem Deta
 | `title` | Resumo do tipo. |
 | `status` | Código HTTP. |
 | `detail` | Explicação desta ocorrência. |
-| `campos` | Só no `pedido-invalido`: todos os campos recusados na etapa em que o pedido parou, cada um com `campo` (caminho, ex.: `itens[0].quantidade`), `type` (motivo) e `detail`. A etapa 1 confere preenchimento e formato; a etapa 2, as regras de negócio, só quando a etapa 1 passa. |
+| `campos` | Só no `pedido-invalido`: todos os campos recusados na etapa em que o pedido parou, cada um com `campo` (caminho, ex.: `itens[0].quantidade`), `type` (motivo) e `detail`. A etapa 1 confere preenchimento e formato, com os erros de tipo (texto no lugar de número, valor fora da lista, data inválida) um por vez, antes dos demais; a etapa 2, as regras de negócio, só quando a etapa 1 passa. |
 
-Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o valor recebido; a exceção são os totais do `total-divergente`.
+Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o valor recebido; a exceção são os totais do `total-divergente`. A ordem dos itens de `campos` não é garantida: o consumidor identifica cada um pelo `campo`.
 
 ```json
 {
@@ -21,8 +21,8 @@ Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o va
   "status": 400,
   "detail": "O pedido tem 2 campo(s) inválido(s).",
   "campos": [
-    { "campo": "itens[0].quantidade", "type": "/erros/quantidade-invalida", "detail": "Quantidade deve ser inteira e maior que zero." },
-    { "campo": "valor_frete", "type": "/erros/frete-negativo", "detail": "Valor do frete não pode ser negativo." }
+    { "campo": "valor_frete", "type": "/erros/frete-negativo", "detail": "Valor do frete não pode ser negativo." },
+    { "campo": "itens[0].quantidade", "type": "/erros/quantidade-invalida", "detail": "Quantidade deve ser inteira e maior que zero." }
   ]
 }
 ```

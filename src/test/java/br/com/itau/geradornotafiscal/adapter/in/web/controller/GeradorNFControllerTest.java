@@ -109,7 +109,21 @@ class GeradorNFControllerTest {
                 Arguments.of("#27 (E01-RN-01)", (UnaryOperator<ObjectNode>) p -> {
                     p.putArray("itens");
                     return p;
-                }, "itens", "campo-obrigatorio"));
+                }, "itens", "campo-obrigatorio"),
+                Arguments.of("#13 (E01-RN-08)", (UnaryOperator<ObjectNode>) p -> {
+                    ((ObjectNode) p.get("destinatario")).put("regime_tributacao", "MEI");
+                    return p;
+                }, "destinatario.regime_tributacao", "valor-nao-aceito"),
+                Arguments.of("#20 (E01-RN-08)", (UnaryOperator<ObjectNode>) p -> {
+                    ((ObjectNode) p.get("destinatario")).put("tipo_pessoa", "ESTRANGEIRA");
+                    return p;
+                }, "destinatario.tipo_pessoa", "valor-nao-aceito"),
+                Arguments.of("#25 (E01-RN-08)", (UnaryOperator<ObjectNode>) p -> {
+                    ((ObjectNode) p.get("itens").get(0)).put("quantidade", "2");
+                    return p;
+                }, "itens[0].quantidade", "formato-invalido"),
+                Arguments.of("#28 (E01-RN-08)", (UnaryOperator<ObjectNode>) p -> p.put("data", "2022-13-45"),
+                        "data", "formato-invalido"));
     }
 
     @Test

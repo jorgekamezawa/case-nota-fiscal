@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Domínio para o contrato de saída, com os campos na ordem atual (E01-NF-02).
@@ -58,6 +57,6 @@ public class NotaFiscalMapper {
     }
 
     private static <T, R> List<R> lista(List<T> origem, Function<T, R> conversao) {
-        return origem.stream().map(conversao).collect(Collectors.toList());
+        return origem.stream().map(conversao).toList();
     }
 }

@@ -42,6 +42,12 @@ class ArquiteturaTest {
             .should().dependOnClassesThat().resideInAPackage("..adapter.out..");
 
     @ArchTest
+    static final ArchRule f03Nf09_webNaoChamaRegraDeDominio = noClasses()
+            .that().resideInAPackage("..adapter.in..")
+            .should().dependOnClassesThat().resideInAPackage("..domain.service..")
+            .because("a web só fala com a porta de entrada; as regras de negócio são acionadas pela aplicação (F03-NF-09)");
+
+    @ArchTest
     static final ArchRule f03Nf01_saidaNaoDependeDaEntrada = noClasses()
             .that().resideInAPackage("..adapter.out..")
             .should().dependOnClassesThat().resideInAPackage("..adapter.in..");

@@ -11,7 +11,7 @@
 Isolar as regras de negócio de HTTP e das integrações, para que uma regra nova seja código novo.
 
 ## Parte funcional
-A fase muda uma regra da [spec E-01](../e-01-nota-correta/spec.md): a recusa passa a listar os motivos por etapa de validação, e não mais todos de uma vez (E01-RN-09, E01-RN-10 e exemplo de validação 23, já atualizados na spec E-01). Na etapa 1 (preenchimento e formato), o pedido nem chega às regras de negócio; na etapa 2, todas as regras de negócio violadas vêm juntas. As demais regras da E-01 continuam valendo.
+A fase muda uma regra da [spec E-01](../e-01-nota-correta/spec.md): a recusa passa a listar os motivos por etapa de validação, e não mais todos de uma vez; na etapa 1, erros de tipo vêm um por vez (E01-RN-09, E01-RN-10 e exemplo de validação 23, já atualizados na spec E-01). Na etapa 1 (preenchimento e formato), o pedido nem chega às regras de negócio; na etapa 2, todas as regras de negócio violadas vêm juntas. As demais regras da E-01 continuam valendo.
 
 ## Parte não funcional
 
@@ -32,6 +32,7 @@ A fase muda uma regra da [spec E-01](../e-01-nota-correta/spec.md): a recusa pas
 | Item | Uso | Escopo |
 |---|---|---|
 | ArchUnit (JUnit 5) | Teste de arquitetura (F03-NF-01) | Só testes |
+| Spring Boot Starter Validation (Jakarta Validation) | Preenchimento e casas decimais da entrada, por anotações (F03-NF-09) | Aplicação |
 
 ## Fora deste entregável
 - Validação que depende de estado externo (ex.: reenvio do E-03) fica na aplicação e entra na fase 5.

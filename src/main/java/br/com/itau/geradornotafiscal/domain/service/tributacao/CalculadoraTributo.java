@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Tributo de cada item: valor unitário × quantidade × alíquota, arredondado a 2 casas (E01-RN-14, E01-RN-16).
@@ -23,6 +22,6 @@ public class CalculadoraTributo {
                         Arredondamento.duasCasas(item.valorUnitario()),
                         item.quantidade(),
                         Arredondamento.duasCasas(item.valorUnitario().multiply(item.quantidade()).multiply(aliquota))))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

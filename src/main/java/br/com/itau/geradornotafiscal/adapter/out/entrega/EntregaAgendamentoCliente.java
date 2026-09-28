@@ -10,9 +10,7 @@ public class EntregaAgendamentoCliente {
             try {
                 //Simula o agendamento da entrega
                 if(notaFiscal.getItens().size() > 5){
-                    /* Aqui está o problema de performance do aplicacao para pedidos com mais de 5 itens
-                        Se voce chegou ate aqui basta remover esse valor de 5s para 'solucionar' o misterio
-                    * */
+                    // Espera maior com 6 linhas de item ou mais: faz parte do cenário simulado e não deve ser removida (RFC R-02).
                     Thread.sleep(5000);
                 }
                 Thread.sleep(200);
