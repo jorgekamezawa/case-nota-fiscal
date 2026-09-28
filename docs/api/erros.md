@@ -34,6 +34,7 @@ Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o va
 | `/erros/pedido-invalido` | 400 | O pedido tem um ou mais campos inválidos, listados em `campos`. |
 | `/erros/json-invalido` | 400 | O corpo não é JSON válido ou não é um objeto. |
 | `/erros/pedido-grande-demais` | 400 | A nota do pedido passa do tamanho que o serviço consegue guardar; sem `campos` ([E04-RN-04](../04-specs/e-04-guarda-das-notas/spec.md)). Acima de 800 linhas de item, a recusa é o `pedido-invalido` com o motivo `itens-acima-do-maximo`. |
+| `/erros/pedido-divergente` | 422 | Já existe nota para o `id_pedido`, emitida para um pedido com outro conteúdo; sem `campos` e sem dado do pedido nem da nota ([E03-RN-03](../04-specs/e-03-reenvio/spec.md)). O reenvio com o mesmo conteúdo recebe 200 com a nota original. |
 | `/erros/erro-interno` | 500 | Erro inesperado; sem detalhe interno. |
 | `/erros/servico-indisponivel` | 503 | Não foi possível guardar a nota; nada foi gravado, e o pedido pode ser reenviado ([E04-RN-01](../04-specs/e-04-guarda-das-notas/spec.md)). |
 
@@ -43,7 +44,7 @@ Usados em `campos[].type`. Regras nas specs [E-01](../04-specs/e-01-nota-correta
 
 | `type` | Quando | Regra |
 |---|---|---|
-| `/erros/campo-obrigatorio` | Campo ausente ou nulo, lista vazia, ou endereço de entrega sem região. | E01-RN-01, E01-RN-06, E01-RN-10 |
+| `/erros/campo-obrigatorio` | Campo ausente ou nulo (inclusive `id_pedido`), lista vazia, ou endereço de entrega sem região. | E01-RN-01, E01-RN-06, E01-RN-10, E03-RN-01 |
 | `/erros/formato-invalido` | Tipo de valor errado (ex.: número enviado como texto, `id_pedido` com decimal, objeto em campo de texto) ou data inválida. | E01-RN-08 |
 | `/erros/casas-decimais-excedidas` | Valor monetário com mais de 2 casas decimais. | E01-RN-08 |
 | `/erros/valor-nao-aceito` | Valor fora da lista aceita; o `detail` traz os aceitos. | E01-RN-08 |

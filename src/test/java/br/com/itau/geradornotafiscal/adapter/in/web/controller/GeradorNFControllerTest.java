@@ -256,7 +256,7 @@ class GeradorNFControllerTest {
 
         enviar(pedido).andExpect(status().isOk()).andExpect(jsonPath("$.itens.length()").value(800));
 
-        verify(notaFiscalPersistenciaPort).guardar(any(), any(), any());
+        verify(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any());
     }
 
     @Test
@@ -269,14 +269,14 @@ class GeradorNFControllerTest {
                 .andExpect(jsonPath("$.campos[0].campo").value("itens"))
                 .andExpect(jsonPath("$.campos[0].type").value("/erros/itens-acima-do-maximo"));
 
-        verify(notaFiscalPersistenciaPort, never()).guardar(any(), any(), any());
+        verify(notaFiscalPersistenciaPort, never()).guardar(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("E04 exemplo 4 (E04-RN-01, E04-NF-02): armazenamento indisponível responde 503 sem detalhe interno e não aciona nada")
     void e04Exemplo4_armazenamentoIndisponivel() throws Exception {
         doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException("conexão recusada no banco")))
-                .when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any());
+                .when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any(), any());
 
         String corpo = enviar(PedidoBase.novo())
                 .andExpect(status().isServiceUnavailable())
@@ -292,7 +292,7 @@ class GeradorNFControllerTest {
     @Test
     @DisplayName("E04-RN-04, E04-NF-02: nota que não cabe no armazenamento responde 400 pedido-grande-demais, sem campos")
     void e04Rn04_notaQueNaoCabe() throws Exception {
-        doThrow(new NotaGrandeDemaisException()).when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any());
+        doThrow(new NotaGrandeDemaisException()).when(notaFiscalPersistenciaPort).guardar(anyLong(), any(), any(), any());
 
         enviar(PedidoBase.novo())
                 .andExpect(status().isBadRequest())

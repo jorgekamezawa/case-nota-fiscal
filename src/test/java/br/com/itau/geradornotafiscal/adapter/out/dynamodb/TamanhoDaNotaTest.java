@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TamanhoDaNotaTest {
 
     private final NotaFiscalDynamoAdapter adapter =
-            new NotaFiscalDynamoAdapter(null, new NotaFiscalRegistroMapper(), new SimpleMeterRegistry(), "notas");
+            new NotaFiscalDynamoAdapter(null, new NotaFiscalRegistroMapper(), new SimpleMeterRegistry(), Clock.systemUTC(), "notas");
 
     @ParameterizedTest(name = "E04-NF-06: {0} linhas com o caractere ''{1}'' cabem? {2}")
     @CsvSource({
@@ -39,7 +40,7 @@ class TamanhoDaNotaTest {
             "990, a, true",
             "990, á, false"})
     void e04Nf06_medicao(int linhas, String caractere, boolean cabe) {
-        int tamanho = NotaFiscalDynamoAdapter.tamanho(adapter.item(Long.MAX_VALUE, nota(linhas, caractere), LocalDate.MAX));
+        int tamanho = NotaFiscalDynamoAdapter.tamanho(adapter.item(Long.MAX_VALUE, nota(linhas, caractere), "f".repeat(64), LocalDate.MAX));
         System.out.printf("E04-NF-06 medição: %d linhas, caractere '%s', %d bytes de %d (%.0f%%)%n", linhas, caractere,
                 tamanho, NotaFiscalDynamoAdapter.TAMANHO_MAXIMO_EM_BYTES,
                 100.0 * tamanho / NotaFiscalDynamoAdapter.TAMANHO_MAXIMO_EM_BYTES);

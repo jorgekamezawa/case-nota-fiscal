@@ -3,9 +3,11 @@ package br.com.itau.geradornotafiscal.adapter.out.dynamodb;
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.dto.NotaFiscalRegistro;
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.NotaFiscalRegistroMapper;
 import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.ConflitoDeGravacaoException;
 import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
 import br.com.itau.geradornotafiscal.application.exception.NotaJaGuardadaException;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort.NotaGuardada;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,10 +17,12 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Map;
@@ -26,8 +30,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * Tabela {@code notas}: chave {@code id_pedido}, a nota em JSON e a data de expurgo em segundos, formato do TTL
- * (E04-NF-01).
+ * Tabela {@code notas}: chave {@code id_pedido}, a nota em JSON, o hash do pedido (E03-NF-02) e a data de expurgo em
+ * segundos, formato do TTL (E04-NF-01).
  */
 @Component
 public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
@@ -35,6 +39,7 @@ public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
     static final String ID_PEDIDO = "id_pedido";
     static final String NOTA = "nota";
     static final String EMITIDA_EM = "emitida_em";
+    static final String HASH_PEDIDO = "hash_pedido";
     static final String EXPIRA_EM = "expira_em";
 
     // Limite de tamanho de um item do DynamoDB (E04-RN-04).
@@ -50,19 +55,21 @@ public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
     private final DynamoDbClient dynamoDb;
     private final NotaFiscalRegistroMapper mapper;
     private final MeterRegistry meterRegistry;
+    private final Clock relogio;
     private final String tabela;
 
     public NotaFiscalDynamoAdapter(DynamoDbClient dynamoDb, NotaFiscalRegistroMapper mapper, MeterRegistry meterRegistry,
-                                   @Value("${aws.dynamodb.tabela-notas:notas}") String tabela) {
+                                   Clock relogio, @Value("${aws.dynamodb.tabela-notas:notas}") String tabela) {
         this.dynamoDb = dynamoDb;
         this.mapper = mapper;
         this.meterRegistry = meterRegistry;
+        this.relogio = relogio;
         this.tabela = tabela;
     }
 
     @Override
-    public void guardar(Long idPedido, NotaFiscal nota, LocalDate apagarAPartirDe) {
-        Map<String, AttributeValue> item = item(idPedido, nota, apagarAPartirDe);
+    public void guardar(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe) {
+        Map<String, AttributeValue> item = item(idPedido, nota, hashPedido, apagarAPartirDe);
         if (tamanho(item) > TAMANHO_MAXIMO_EM_BYTES) {
             throw new NotaGrandeDemaisException();
         }
@@ -70,36 +77,48 @@ public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
             chamar("guardar", () -> dynamoDb.putItem(requisicao -> requisicao
                     .tableName(tabela)
                     .item(item)
-                    .conditionExpression("attribute_not_exists(" + ID_PEDIDO + ")")));
+                    // O expurgo apaga em até alguns dias depois da data: nota vencida ainda presente é substituída (E03-RN-06).
+                    .conditionExpression("attribute_not_exists(" + ID_PEDIDO + ") OR " + EXPIRA_EM + " <= :agora")
+                    .expressionAttributeValues(Map.of(":agora", AttributeValue.fromN(Long.toString(agora()))))));
         } catch (ConditionalCheckFailedException e) {
             throw new NotaJaGuardadaException();
+        } catch (TransactionConflictException e) {
+            throw new ConflitoDeGravacaoException(e);
         }
     }
 
     @Override
-    public Optional<NotaFiscal> buscar(Long idPedido) {
+    public Optional<NotaGuardada> buscar(Long idPedido) {
         Map<String, AttributeValue> item = chamar("buscar", () -> dynamoDb.getItem(requisicao -> requisicao
                 .tableName(tabela)
                 .key(Map.of(ID_PEDIDO, AttributeValue.fromN(idPedido.toString())))
                 .consistentRead(true))).item();
-        if (item == null || item.isEmpty()) {
+        if (item == null || item.isEmpty() || Long.parseLong(item.get(EXPIRA_EM).n()) <= agora()) {
             return Optional.empty();
         }
-        return Optional.of(mapper.paraDominio(JSON.readValue(item.get(NOTA).s(), NotaFiscalRegistro.class)));
+        return Optional.of(new NotaGuardada(mapper.paraDominio(JSON.readValue(item.get(NOTA).s(), NotaFiscalRegistro.class)),
+                item.get(HASH_PEDIDO).s()));
     }
 
-    Map<String, AttributeValue> item(Long idPedido, NotaFiscal nota, LocalDate apagarAPartirDe) {
+    Map<String, AttributeValue> item(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe) {
         return Map.of(
                 ID_PEDIDO, AttributeValue.fromN(idPedido.toString()),
                 NOTA, AttributeValue.fromS(JSON.writeValueAsString(mapper.paraRegistro(nota))),
+                HASH_PEDIDO, AttributeValue.fromS(hashPedido),
                 EMITIDA_EM, AttributeValue.fromS(nota.getData().toString()),
                 EXPIRA_EM, AttributeValue.fromN(Long.toString(apagarAPartirDe.atStartOfDay(SAO_PAULO).toEpochSecond())));
+    }
+
+    private long agora() {
+        return relogio.instant().getEpochSecond();
     }
 
     // Falha de conexão, erro do serviço ou limite de vazão, depois das novas tentativas do SDK, é indisponibilidade (E04-RN-01).
     private <T> T chamar(String operacao, Supplier<T> chamada) {
         try {
             return chamada.get();
+        } catch (ConditionalCheckFailedException | TransactionConflictException e) {
+            throw e;
         } catch (SdkClientException e) {
             throw indisponivel(operacao, e);
         } catch (DynamoDbException e) {

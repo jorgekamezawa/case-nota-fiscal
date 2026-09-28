@@ -3,8 +3,10 @@ package br.com.itau.geradornotafiscal.adapter.out.dynamodb;
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.NotaFiscalRegistroMapper;
 import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.ConflitoDeGravacaoException;
 import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
 import br.com.itau.geradornotafiscal.application.exception.NotaJaGuardadaException;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort.NotaGuardada;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
 import br.com.itau.geradornotafiscal.domain.valueobject.Documento;
@@ -17,24 +19,31 @@ import br.com.itau.geradornotafiscal.domain.valueobject.TipoPessoa;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Guarda das notas contra o emulador oficial do DynamoDB (E04-NF-05).
@@ -43,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class NotaFiscalDynamoAdapterTest {
 
     private static final LocalDate APAGAR_EM = LocalDate.of(2032, 1, 1);
+    private static final String HASH = "a".repeat(64);
 
     @Autowired
     private NotaFiscalDynamoAdapter adapter;
@@ -57,12 +67,14 @@ class NotaFiscalDynamoAdapterTest {
         long idPedido = PedidoBase.novoId();
         NotaFiscal nota = nota(1, "Teclado USB");
 
-        adapter.guardar(idPedido, nota, APAGAR_EM);
-        NotaFiscal lida = adapter.buscar(idPedido).orElseThrow();
+        adapter.guardar(idPedido, nota, HASH, APAGAR_EM);
+        NotaGuardada guardada = adapter.buscar(idPedido).orElseThrow();
+        NotaFiscal lida = guardada.nota();
 
         assertThat(lida).usingRecursiveComparison().isEqualTo(nota);
         assertEquals("100.00", lida.getValorTotalItens().toPlainString());
         assertEquals("0.00", lida.getItens().get(0).valorTributoItem().toPlainString());
+        assertEquals(HASH, guardada.hashPedido());
     }
 
     @Test
@@ -70,7 +82,7 @@ class NotaFiscalDynamoAdapterTest {
     void e04Nf01_dataDeExpurgoNoFormatoDoTtl() {
         long idPedido = PedidoBase.novoId();
 
-        adapter.guardar(idPedido, nota(1, "Teclado USB"), APAGAR_EM);
+        adapter.guardar(idPedido, nota(1, "Teclado USB"), HASH, APAGAR_EM);
 
         Map<String, AttributeValue> item = dynamoDb.getItem(r -> r.tableName("notas")
                 .key(Map.of("id_pedido", AttributeValue.fromN(Long.toString(idPedido))))).item();
@@ -81,11 +93,11 @@ class NotaFiscalDynamoAdapterTest {
     @DisplayName("E03-NF-01: a segunda nota do mesmo pedido não é gravada")
     void e03Nf01_segundaNotaDoMesmoPedidoRecusada() {
         long idPedido = PedidoBase.novoId();
-        adapter.guardar(idPedido, nota(1, "Teclado USB"), APAGAR_EM);
+        adapter.guardar(idPedido, nota(1, "Teclado USB"), HASH, APAGAR_EM);
 
-        assertThatThrownBy(() -> adapter.guardar(idPedido, nota(1, "Outro"), APAGAR_EM))
+        assertThatThrownBy(() -> adapter.guardar(idPedido, nota(1, "Outro"), HASH, APAGAR_EM))
                 .isInstanceOf(NotaJaGuardadaException.class);
-        assertEquals("Teclado USB", adapter.buscar(idPedido).orElseThrow().getItens().get(0).descricao());
+        assertEquals("Teclado USB", adapter.buscar(idPedido).orElseThrow().nota().getItens().get(0).descricao());
     }
 
     @Test
@@ -99,7 +111,7 @@ class NotaFiscalDynamoAdapterTest {
     void e04Rn04_notaQueNaoCabe() {
         long idPedido = PedidoBase.novoId();
 
-        assertThatThrownBy(() -> adapter.guardar(idPedido, nota(1, "x".repeat(410 * 1024)), APAGAR_EM))
+        assertThatThrownBy(() -> adapter.guardar(idPedido, nota(1, "x".repeat(410 * 1024)), HASH, APAGAR_EM))
                 .isInstanceOf(NotaGrandeDemaisException.class);
         assertThat(adapter.buscar(idPedido)).isEmpty();
     }
@@ -113,12 +125,37 @@ class NotaFiscalDynamoAdapterTest {
                 .region(Region.US_EAST_1)
                 .credentialsProvider(AnonymousCredentialsProvider.create())
                 .build()) {
-            NotaFiscalDynamoAdapter semArmazenamento = new NotaFiscalDynamoAdapter(semBanco, mapper, metricas, "notas");
+            NotaFiscalDynamoAdapter semArmazenamento = new NotaFiscalDynamoAdapter(semBanco, mapper, metricas, Clock.systemUTC(), "notas");
 
-            assertThatThrownBy(() -> semArmazenamento.guardar(PedidoBase.novoId(), nota(1, "Teclado USB"), APAGAR_EM))
+            assertThatThrownBy(() -> semArmazenamento.guardar(PedidoBase.novoId(), nota(1, "Teclado USB"), HASH, APAGAR_EM))
                     .isInstanceOf(ArmazenamentoIndisponivelException.class);
         }
         assertEquals(1.0, metricas.counter("armazenamento.falhas", "operacao", "guardar").count());
+    }
+
+    @Test
+    @DisplayName("E03-RN-06: nota vencida e ainda não apagada não é devolvida e dá lugar à nota nova")
+    void e03Rn06_notaVencidaSubstituida() {
+        long idPedido = PedidoBase.novoId();
+        adapter.guardar(idPedido, nota(1, "Vencida"), HASH, LocalDate.of(2020, 1, 1));
+
+        assertThat(adapter.buscar(idPedido)).isEmpty();
+
+        adapter.guardar(idPedido, nota(1, "Nova"), HASH, APAGAR_EM);
+        assertEquals("Nova", adapter.buscar(idPedido).orElseThrow().nota().getItens().get(0).descricao());
+    }
+
+    @Test
+    @DisplayName("E03-NF-01: conflito com outra gravação do mesmo pedido (simulado: o emulador não o gera)")
+    void e03Nf01_conflitoDeGravacao() {
+        DynamoDbClient emConflito = mock(DynamoDbClient.class);
+        when(emConflito.putItem(ArgumentMatchers.<Consumer<PutItemRequest.Builder>>any()))
+                .thenThrow(TransactionConflictException.builder().message("conflito").build());
+        NotaFiscalDynamoAdapter comConflito =
+                new NotaFiscalDynamoAdapter(emConflito, mapper, new SimpleMeterRegistry(), Clock.systemUTC(), "notas");
+
+        assertThatThrownBy(() -> comConflito.guardar(PedidoBase.novoId(), nota(1, "Teclado USB"), HASH, APAGAR_EM))
+                .isInstanceOf(ConflitoDeGravacaoException.class);
     }
 
     static NotaFiscal nota(int linhas, String descricao) {

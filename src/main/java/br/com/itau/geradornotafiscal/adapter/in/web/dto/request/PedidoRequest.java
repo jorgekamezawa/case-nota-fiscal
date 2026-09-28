@@ -19,7 +19,7 @@ import java.util.List;
  * etapa 1 da validação (E01-RN-01, E01-RN-08); o tipo de cada campo é conferido na conversão do JSON.
  */
 public record PedidoRequest(
-        @JsonProperty("id_pedido") Long idPedido,
+        @JsonProperty("id_pedido") @NotNull Long idPedido,
         @JsonProperty("data") @JsonDeserialize(using = DataNoFormatoIso.class) LocalDate data,
         @JsonProperty("valor_total_itens") @NotNull @DuasCasasDecimais BigDecimal valorTotalItens,
         @JsonProperty("valor_frete") @NotNull @DuasCasasDecimais BigDecimal valorFrete,
