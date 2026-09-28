@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) (habilitador técnico) |
 | **Fase** | 4 |
-| **Status** | Planejada |
+| **Status** | Concluída |
 | **Decisão** | [ADR-0007](../../03-engenharia/adr/0007-observabilidade-com-opentelemetry.md), [ADR-0011](../../03-engenharia/adr/0011-telemetria-no-grafana-cloud.md) |
 
 ## Objetivo

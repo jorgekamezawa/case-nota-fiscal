@@ -1,0 +1,319 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "slo-gerador-nota-fiscal",
+      "folder": "Gerador de nota fiscal",
+      "interval": "1m",
+      "rules": [
+        {
+          "uid": "slo-disponibilidade-rapida",
+          "title": "Disponibilidade 99,9%: consumo rápido do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Disponibilidade 99,9% consumindo o orçamento de erro 14.4x acima do sustentável (janelas 1h e 5m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "disponibilidade"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status=~\"5..\"}[1h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status!~\"4..\"}[1h]))) > 0.0144) and ((sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status!~\"4..\"}[5m]))) > 0.0144)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "slo-disponibilidade-lenta",
+          "title": "Disponibilidade 99,9%: consumo lento do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Disponibilidade 99,9% consumindo o orçamento de erro 6x acima do sustentável (janelas 6h e 30m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "disponibilidade"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status=~\"5..\"}[6h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status!~\"4..\"}[6h]))) > 0.006) and ((sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status=~\"5..\"}[30m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",status!~\"4..\"}[30m]))) > 0.006)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "slo-latencia-p95-rapida",
+          "title": "Latência p95 < 800 ms: consumo rápido do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Latência p95 < 800 ms consumindo o orçamento de erro 14.4x acima do sustentável (janelas 1h e 5m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "latencia-p95"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"800\"}[1h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[1h])))) > 0.72) and ((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"800\"}[5m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[5m])))) > 0.72)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "slo-latencia-p95-lenta",
+          "title": "Latência p95 < 800 ms: consumo lento do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Latência p95 < 800 ms consumindo o orçamento de erro 6x acima do sustentável (janelas 6h e 30m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "latencia-p95"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"800\"}[6h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[6h])))) > 0.3) and ((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"800\"}[30m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[30m])))) > 0.3)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "slo-latencia-p99-rapida",
+          "title": "Latência p99 < 1,5 s: consumo rápido do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Latência p99 < 1,5 s consumindo o orçamento de erro 14.4x acima do sustentável (janelas 1h e 5m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "latencia-p99"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"1500\"}[1h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[1h])))) > 0.144) and ((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"1500\"}[5m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[5m])))) > 0.144)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "slo-latencia-p99-lenta",
+          "title": "Latência p99 < 1,5 s: consumo lento do orçamento",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "annotations": {
+            "summary": "Latência p99 < 1,5 s consumindo o orçamento de erro 6x acima do sustentável (janelas 6h e 30m).",
+            "descricao": "Burn rate no modelo do SRE Workbook (RFC 6.4). Até a fase 5 o alerta de latência dispara, porque a resposta ainda espera as integrações."
+          },
+          "labels": {
+            "servico": "gerador-nota-fiscal",
+            "slo": "latencia-p99"
+          },
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 21600,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"1500\"}[6h])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[6h])))) > 0.06) and ((1 - (sum(rate(http_server_requests_milliseconds_bucket{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\",le=\"1500\"}[30m])) / sum(rate(http_server_requests_milliseconds_count{service_name=\"gerador-nota-fiscal\",uri=\"/api/pedido/gerarNotaFiscal\"}[30m])))) > 0.06)",
+                "instant": true,
+                "range": false
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

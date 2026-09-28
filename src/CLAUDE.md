@@ -11,6 +11,7 @@
 - Bean sem estado mutável: nada de dado de requisição em campo, principalmente `static`.
 - Valor monetário sempre decimal exato; arredondamento só pela classe `Arredondamento` (NBR 5891).
 - Dependência nova só com aprovação.
+- Telemetria (logs, métricas e spans) só nos adaptadores e em `config`; aplicação e domínio não a conhecem (`ArquiteturaObservabilidadeTest`). Log com dado do pedido usa campo próprio (`addKeyValue`), nunca a mensagem.
 
 ## Contrato e erros
 - Entrada da API imutável; o teste de contrato não pode ser enfraquecido.

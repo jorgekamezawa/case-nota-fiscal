@@ -16,3 +16,8 @@ Serviço que recebe um pedido, calcula tributo e frete, emite a nota fiscal e ac
 - Documentos em português do Brasil, escritos como demanda do time; sem travessão nem meia-risca; sem datas no planejamento (fases).
 - Commits no padrão `tipo: descrição` em português (ex.: `docs: ...`, `fix: ...`).
 - Java pelo sdkman (`.sdkmanrc`).
+
+## Observabilidade local
+- `docker compose up -d` sobe o Grafana local (`otel-lgtm`) em http://localhost:3000, com o dashboard e os alertas de `observabilidade/grafana`.
+- `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` roda a aplicação com log em texto e envio da telemetria ao Grafana local.
+- Ao terminar: `docker compose down` (sem `-v`).
