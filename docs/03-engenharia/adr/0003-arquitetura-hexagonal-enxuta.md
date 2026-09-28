@@ -17,17 +17,26 @@ O que pesa: regra testável sem infraestrutura; trocar integração ou banco sem
 ## Consequências
 - **Ganhos:** regras testáveis sem Spring e sem as esperas simuladas; trocar uma integração ou o banco não toca o domínio.
 - **Custos:** mais pacotes e interfaces; mapeamento entre o contrato JSON e o domínio.
-- **Passa a ser obrigatório:** o domínio não depende de Spring, HTTP nem banco, e um teste de arquitetura (ArchUnit) no build quebra quando essa regra é violada. Mapeamento só onde o formato externo difere do domínio. A estrutura de pacotes, com base `br.com.itau.geradornotafiscal`:
+- **Passa a ser obrigatório:** o domínio não depende de Spring, HTTP nem banco, exceto as anotações de estereótipo do Spring (`@Component`, `@Service`), que só declaram beans; um teste de arquitetura (ArchUnit) no build quebra quando essa regra é violada. Mapeamento só onde o formato externo difere do domínio. A estrutura de pacotes, com base `br.com.itau.geradornotafiscal`:
 
 | Pacote | Responsabilidade |
 |---|---|
-| `domain.model` | Pedido, nota, item, destinatário, endereço e enums |
-| `domain.tributacao` | Regras de alíquota por tipo de pessoa e regime |
-| `domain.frete` | Cálculo do frete por região |
+| `domain.entity` | Objetos com identidade própria: pedido e nota |
+| `domain.valueobject` | Objetos definidos só pelos valores: item, item da nota, destinatário, documento, endereço e enums |
+| `domain.service.tributacao` | Regras de alíquota, uma classe por tipo de pessoa ou regime, e cálculo do tributo |
+| `domain.service.frete` | Cálculo do frete por região |
+| `domain.service.validacao` | Regras de negócio do pedido |
+| `domain.service.calculo` | Arredondamento |
 | `domain.exception` | Violações de regra de negócio |
 | `application.port.in` | Caso de uso de geração da nota |
 | `application.port.out` | Portas para registro, estoque, entrega, financeiro e persistência |
-| `application.usecase` | Orquestração: valida, calcula, registra e aciona as integrações |
-| `adapter.in.web` | Controller, DTOs de entrada e saída (contrato em `snake_case`) e tratamento de erros |
-| `adapter.out` | Integrações e persistência |
+| `application.usecase` | Orquestração: confere as regras de negócio, calcula, registra e aciona as integrações |
+| `adapter.in.web.controller` | Controller |
+| `adapter.in.web.dto.request` / `dto.response` | Contrato de entrada e de saída (`snake_case`), inclusive o corpo de erro |
+| `adapter.in.web.mappers` | Conversão entre o contrato e o domínio |
+| `adapter.in.web.validacao` | Preenchimento e formato da entrada |
+| `adapter.in.web.handler` | Tratamento de erros |
+| `adapter.out.<sistema>` | Integrações (estoque, registro, entrega, financeiro) e, depois, persistência |
 | `config` | Configuração do Spring |
+
+A aplicação pode usar anotações do Spring (ex.: `@Service`, `@Transactional`); o domínio só as de estereótipo, que declaram beans.

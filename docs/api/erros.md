@@ -10,7 +10,7 @@ Toda resposta de erro de `POST /api/pedido/gerarNotaFiscal` segue o Problem Deta
 | `title` | Resumo do tipo. |
 | `status` | Código HTTP. |
 | `detail` | Explicação desta ocorrência. |
-| `campos` | Só no `pedido-invalido`: todos os campos recusados, cada um com `campo` (caminho, ex.: `itens[0].quantidade`), `type` (motivo) e `detail`. |
+| `campos` | Só no `pedido-invalido`: todos os campos recusados na etapa em que o pedido parou, cada um com `campo` (caminho, ex.: `itens[0].quantidade`), `type` (motivo) e `detail`. A etapa 1 confere preenchimento e formato; a etapa 2, as regras de negócio, só quando a etapa 1 passa. |
 
 Nenhuma resposta de erro traz dado pessoal (nome, documento, endereço) nem o valor recebido; a exceção são os totais do `total-divergente`.
 

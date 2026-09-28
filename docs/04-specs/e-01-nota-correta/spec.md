@@ -8,7 +8,7 @@
 | **Regras de negócio** | [Levantamento](../../01-levantamento/levantamento-regras-negocio.md) |
 
 ## História
-Como sistema de origem, quero receber a nota com tributo, frete e totais corretos, só com os itens do meu pedido, ou uma recusa com todos os motivos de uma vez, para nunca repassar uma nota errada.
+Como sistema de origem, quero receber a nota com tributo, frete e totais corretos, só com os itens do meu pedido, ou uma recusa com os motivos agrupados por etapa de validação, para nunca repassar uma nota errada.
 
 ## Parte funcional
 "Definido nesta spec" = ponto que o levantamento não decidia, decidido pelo PO ao escrever esta spec.
@@ -24,8 +24,8 @@ Como sistema de origem, quero receber a nota com tributo, frete e totais correto
 | E01-RN-06 | O destinatário tem ao menos um endereço com finalidade `ENTREGA` ou `COBRANCA_ENTREGA`. O primeiro deles é o endereço de entrega e precisa ter região. | Q-05, Q-06; presença da região só no escolhido (o valor é conferido em todos pela E01-RN-08): definido nesta spec |
 | E01-RN-07 | `valor_total_itens` é igual à soma de valor unitário × quantidade dos itens, comparada exatamente, em centavos, sem arredondamento, porque os valores têm no máximo 2 casas (E01-RN-08) e a quantidade é inteira. A recusa informa o total declarado e o calculado. A conferência só é feita quando há ao menos 1 item e todos são válidos. | Q-01, Q-08; itens inválidos: definido nesta spec |
 | E01-RN-08 | Todo campo presente, mesmo que nenhuma regra o use, é recusado se tiver valor fora da lista aceita ou formato errado, informando o campo. Formato errado: campo numérico (`id_pedido`, `quantidade`, `valor_unitario`, `valor_frete`, `valor_total_itens`) com texto, inclusive número enviado como texto (ex.: `"10"`); valor monetário com mais de 2 casas decimais; `data` que não é uma data válida. O formato é conferido primeiro: campo com formato errado recebe só esse motivo. Aceitos (valores do contrato atual): tipo de pessoa `FISICA`, `JURIDICA`; regime `SIMPLES_NACIONAL`, `LUCRO_REAL`, `LUCRO_PRESUMIDO`, `OUTROS` (este recusado pela E01-RN-03); documento `CPF`, `CNPJ`; finalidade `ENTREGA`, `COBRANCA_ENTREGA`, `COBRANCA`, `OUTROS`; região `NORTE`, `NORDESTE`, `CENTRO_OESTE`, `SUDESTE`, `SUL`. | Q-07; definido nesta spec |
-| E01-RN-09 | Pedido recusado não gera nota. A recusa lista todos os campos inválidos de uma vez, cada um com o motivo, e não repete dado pessoal (nome, documento, endereço). | Q-07 |
-| E01-RN-10 | Quando um campo obrigatório falta, a recusa não lista os campos que dependem dele: sem destinatário, nada dentro dele é conferido (tipo de pessoa, regime, documentos, endereços); sem tipo de pessoa, a coerência do documento com o tipo de pessoa e o regime não são conferidos, mas o dígito verificador de cada documento é. Os demais campos continuam conferidos (E01-RN-09). Campo com valor nulo conta como ausente. Campo que o contrato não conhece é ignorado, sem recusa. | Definido nesta spec |
+| E01-RN-09 | Pedido recusado não gera nota. A validação tem duas etapas: (1) preenchimento e formato (E01-RN-01, E01-RN-08); (2) regras de negócio (E01-RN-02 a E01-RN-07), conferidas só quando a etapa 1 passa. A recusa lista todos os campos inválidos da etapa em que o pedido parou, cada um com o motivo, e não repete dado pessoal (nome, documento, endereço). | Q-07; recusa por etapa: definido na fase 3 ([F-03](../f-03-arquitetura/spec.md)) |
+| E01-RN-10 | Quando um campo obrigatório falta, a recusa não lista os campos que dependem dele: sem destinatário, nada dentro dele é conferido (tipo de pessoa, regime, documentos, endereços); sem tipo de pessoa, a obrigatoriedade do regime não é conferida. Os demais campos da mesma etapa continuam conferidos (E01-RN-09). Campo com valor nulo conta como ausente. Campo que o contrato não conhece é ignorado, sem recusa. | Definido nesta spec; ajustado na fase 3 ([F-03](../f-03-arquitetura/spec.md)) |
 
 #### Exemplos de validação
 Pedido base: PF, CPF `887.403.470-95` (válido), 1 item de 50,00 × 2, `valor_total_itens` 100,00, `valor_frete` 10,00, um endereço `ENTREGA` na região `SUDESTE`. Cada linha muda só o que está descrito.
@@ -54,7 +54,7 @@ Pedido base: PF, CPF `887.403.470-95` (válido), 1 item de 50,00 × 2, `valor_to
 | 20 | Tipo de pessoa `ESTRANGEIRA` | Recusado: tipo de pessoa fora dos valores aceitos | E01-RN-08 |
 | 21 | Destinatário ausente | Recusado: destinatário obrigatório; documento, regime e endereço não conferidos | E01-RN-10 |
 | 22 | Quantidade -1 e `valor_frete` -5,00 | Recusado, com os dois campos na mesma resposta, sem nome, documento ou endereço; total não conferido | E01-RN-04, E01-RN-05, E01-RN-07, E01-RN-09 |
-| 23 | Destinatário ausente e `valor_frete` -5,00 | Recusado: destinatário obrigatório e frete negativo, na mesma resposta | E01-RN-09, E01-RN-10 |
+| 23 | Destinatário ausente e `valor_frete` -5,00 | Recusado: destinatário obrigatório; frete não conferido, porque a etapa 1 não passou | E01-RN-09, E01-RN-10 |
 | 24 | `valor_frete` -1,555 | Recusado só por frete com mais de 2 casas | E01-RN-08 |
 | 25 | Quantidade `"2"` (texto) | Recusado: quantidade em formato errado; total não conferido | E01-RN-08, E01-RN-07 |
 | 26 | Item sem quantidade | Recusado: quantidade obrigatória; total não conferido | E01-RN-01, E01-RN-07 |
