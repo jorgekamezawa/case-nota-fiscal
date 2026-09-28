@@ -3,6 +3,7 @@ package br.com.itau.geradornotafiscal;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.databind.JsonNode;
@@ -40,6 +42,8 @@ class LogPorRequisicaoTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @MockitoSpyBean
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @MockitoBean
     private EstoquePort estoquePort;
     @MockitoBean
@@ -85,13 +89,14 @@ class LogPorRequisicaoTest {
 
     @Test
     void f04Nf04_erroInesperadoGeraStackTrace(CapturedOutput saida) throws Exception {
-        doThrow(new IllegalStateException("entrega fora do ar")).when(entregaPort).agendarEntrega(any());
+        doThrow(new IllegalStateException("armazenamento fora do ar")).when(notaFiscalPersistenciaPort)
+                .guardar(any(), any(), any(), any(), any());
 
         enviar(PedidoBase.novo().toString()).andExpect(status().isInternalServerError());
 
         JsonNode erro = linha(saida, "Erro inesperado ao gerar a nota fiscal").get("error");
         assertThat(erro.get("type").asString()).isEqualTo(IllegalStateException.class.getName());
-        assertThat(erro.get("stack_trace").asString()).contains("entrega fora do ar").contains("\tat ");
+        assertThat(erro.get("stack_trace").asString()).contains("armazenamento fora do ar").contains("\tat ");
     }
 
     private ResultActions enviar(String corpo) throws Exception {

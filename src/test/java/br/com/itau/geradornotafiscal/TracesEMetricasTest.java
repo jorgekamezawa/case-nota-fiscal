@@ -1,6 +1,9 @@
 package br.com.itau.geradornotafiscal;
 
+import br.com.itau.geradornotafiscal.adapter.in.fila.ProcessadorDeTarefa;
 import br.com.itau.geradornotafiscal.adapter.out.entrega.EntregaAgendamentoCliente;
+import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
+import io.opentelemetry.api.trace.SpanId;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -11,6 +14,7 @@ import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
@@ -62,6 +66,8 @@ class TracesEMetricasTest {
     private SdkTracerProvider tracerProvider;
     @Autowired
     private MeterRegistry meterRegistry;
+    @Autowired
+    private ProcessadorDeTarefa processadorDeTarefa;
     @MockitoBean
     private EntregaAgendamentoCliente entregaAgendamentoCliente;
 
@@ -85,14 +91,27 @@ class TracesEMetricasTest {
     }
 
     @Test
-    void f04Nf02_umSpanPorIntegracaoNoMesmoTrace() throws Exception {
-        enviar(PedidoBase.novo()).andExpect(status().isOk());
+    @DisplayName("F04-NF-02, E02-NF-09: cada tarefa tem trace próprio, fora do da requisição, com o span da sua integração dentro")
+    void f04Nf02_e02Nf09_umSpanPorIntegracaoNoTraceDaTarefa() throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        enviar(pedido).andExpect(status().isOk());
+        String traceDaRequisicao = spans().stream().filter(s -> s.getParentSpanId().equals(SpanId.getInvalid()))
+                .findFirst().orElseThrow().getTraceId();
+
+        for (Sistema sistema : Sistema.values()) {
+            processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), sistema);
+        }
 
         List<SpanData> integracoes = spans().stream().filter(s -> s.getName().equals("integracao")).toList();
         assertThat(integracoes).extracting(s -> s.getAttributes().get(stringKey("sistema")))
                 .containsExactlyInAnyOrder("estoque", "registro", "entrega", "financeiro");
-        assertThat(integracoes).extracting(SpanData::getTraceId).containsOnly(integracoes.getFirst().getTraceId());
-        assertThat(integracoes).allSatisfy(s -> assertThat(s.getEndEpochNanos()).isGreaterThan(s.getStartEpochNanos()));
+        assertThat(integracoes).allSatisfy(integracao -> {
+            SpanData tarefa = spans().stream().filter(s -> s.getSpanId().equals(integracao.getParentSpanId())).findFirst().orElseThrow();
+            assertThat(tarefa.getName()).isEqualTo("tarefa");
+            assertThat(tarefa.getParentSpanId()).isEqualTo(SpanId.getInvalid());
+            assertThat(tarefa.getTraceId()).isNotEqualTo(traceDaRequisicao);
+            assertThat(integracao.getEndEpochNanos()).isGreaterThan(integracao.getStartEpochNanos());
+        });
     }
 
     @Test
@@ -100,7 +119,9 @@ class TracesEMetricasTest {
         doThrow(new IllegalStateException("destinatário " + PedidoBase.CPF))
                 .when(entregaAgendamentoCliente).criarAgendamentoEntrega(any());
 
-        enviar(PedidoBase.novo()).andExpect(status().isInternalServerError());
+        ObjectNode pedido = PedidoBase.novo();
+        enviar(pedido).andExpect(status().isOk());
+        processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), Sistema.ENTREGA);
 
         SpanData entrega = spans().stream()
                 .filter(s -> "entrega".equals(s.getAttributes().get(stringKey("sistema"))))
@@ -132,8 +153,12 @@ class TracesEMetricasTest {
     @Test
     void f04Nf07_notasEmitidasEDuracaoPorIntegracao() throws Exception {
         double antes = meterRegistry.counter("notas.emitidas").count();
+        ObjectNode pedido = PedidoBase.novo();
 
-        enviar(PedidoBase.novo()).andExpect(status().isOk());
+        enviar(pedido).andExpect(status().isOk());
+        for (Sistema sistema : Sistema.values()) {
+            processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), sistema);
+        }
 
         assertThat(meterRegistry.counter("notas.emitidas").count()).isEqualTo(antes + 1);
         assertThat(meterRegistry.find("integracao").timers())

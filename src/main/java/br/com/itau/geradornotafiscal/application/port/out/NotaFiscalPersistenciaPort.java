@@ -1,8 +1,10 @@
 package br.com.itau.geradornotafiscal.application.port.out;
 
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
+import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,12 +13,13 @@ import java.util.Optional;
 public interface NotaFiscalPersistenciaPort {
 
     /**
-     * Guarda a nota do pedido até a data de expurgo, só se o pedido não tem nota ou a dele venceu (E03-RN-06).
+     * Guarda a nota do pedido e as tarefas de integração juntas, ou nada (E02-RN-02), até a data de expurgo, só se o
+     * pedido não tem nota ou a dele venceu (E03-RN-06).
      * Lança {@code NotaJaGuardadaException} se o pedido já tem nota, {@code ConflitoDeGravacaoException} se outra
      * gravação do mesmo pedido está em andamento, {@code NotaGrandeDemaisException} se a nota não cabe e
      * {@code ArmazenamentoIndisponivelException} se não há como guardar.
      */
-    void guardar(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe);
+    void guardar(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe, List<TarefaIntegracao> tarefas);
 
     /** Nota guardada e ainda no prazo, lida sempre na versão mais recente (E03-NF-01). */
     Optional<NotaGuardada> buscar(Long idPedido);

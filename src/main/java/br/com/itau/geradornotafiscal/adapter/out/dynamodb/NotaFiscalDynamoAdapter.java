@@ -2,21 +2,22 @@ package br.com.itau.geradornotafiscal.adapter.out.dynamodb;
 
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.dto.NotaFiscalRegistro;
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.NotaFiscalRegistroMapper;
-import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.TarefaIntegracaoRegistroMapper;
 import br.com.itau.geradornotafiscal.application.exception.ConflitoDeGravacaoException;
 import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
 import br.com.itau.geradornotafiscal.application.exception.NotaJaGuardadaException;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort.NotaGuardada;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
-import io.micrometer.core.instrument.MeterRegistry;
+import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
+import software.amazon.awssdk.services.dynamodb.model.Put;
+import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -25,13 +26,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * Tabela {@code notas}: chave {@code id_pedido}, a nota em JSON, o hash do pedido (E03-NF-02) e a data de expurgo em
- * segundos, formato do TTL (E04-NF-01).
+ * segundos, formato do TTL (E04-NF-01). A nota é gravada na mesma transação das tarefas de integração (E02-NF-02).
  */
 @Component
 public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
@@ -54,42 +56,72 @@ public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
 
     private final DynamoDbClient dynamoDb;
     private final NotaFiscalRegistroMapper mapper;
-    private final MeterRegistry meterRegistry;
+    private final TarefaIntegracaoRegistroMapper tarefaMapper;
+    private final ChamadasDynamoDb chamadas;
     private final Clock relogio;
     private final String tabela;
+    private final String tabelaTarefas;
 
-    public NotaFiscalDynamoAdapter(DynamoDbClient dynamoDb, NotaFiscalRegistroMapper mapper, MeterRegistry meterRegistry,
-                                   Clock relogio, @Value("${aws.dynamodb.tabela-notas:notas}") String tabela) {
+    public NotaFiscalDynamoAdapter(DynamoDbClient dynamoDb, NotaFiscalRegistroMapper mapper,
+                                   TarefaIntegracaoRegistroMapper tarefaMapper, ChamadasDynamoDb chamadas, Clock relogio,
+                                   @Value("${aws.dynamodb.tabela-notas:notas}") String tabela,
+                                   @Value("${aws.dynamodb.tabela-tarefas:tarefas_integracao}") String tabelaTarefas) {
         this.dynamoDb = dynamoDb;
         this.mapper = mapper;
-        this.meterRegistry = meterRegistry;
+        this.tarefaMapper = tarefaMapper;
+        this.chamadas = chamadas;
         this.relogio = relogio;
         this.tabela = tabela;
+        this.tabelaTarefas = tabelaTarefas;
     }
 
     @Override
-    public void guardar(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe) {
+    public void guardar(Long idPedido, NotaFiscal nota, String hashPedido, LocalDate apagarAPartirDe,
+                        List<TarefaIntegracao> tarefas) {
         Map<String, AttributeValue> item = item(idPedido, nota, hashPedido, apagarAPartirDe);
         if (tamanho(item) > TAMANHO_MAXIMO_EM_BYTES) {
             throw new NotaGrandeDemaisException();
         }
+        long expiraEm = Long.parseLong(item.get(EXPIRA_EM).n());
+        List<TransactWriteItem> gravacoes = new ArrayList<>();
+        gravacoes.add(TransactWriteItem.builder().put(Put.builder()
+                .tableName(tabela)
+                .item(item)
+                // O expurgo apaga em até alguns dias depois da data: nota vencida ainda presente é substituída (E03-RN-06).
+                .conditionExpression("attribute_not_exists(" + ID_PEDIDO + ") OR " + EXPIRA_EM + " <= :agora")
+                .expressionAttributeValues(Map.of(":agora", AttributeValue.fromN(Long.toString(agora()))))
+                .build()).build());
+        tarefas.forEach(tarefa -> gravacoes.add(TransactWriteItem.builder().put(Put.builder()
+                .tableName(tabelaTarefas)
+                .item(TarefaIntegracaoDynamoAdapter.item(tarefaMapper.paraRegistro(tarefa), expiraEm))
+                .build()).build()));
         try {
-            chamar("guardar", () -> dynamoDb.putItem(requisicao -> requisicao
-                    .tableName(tabela)
-                    .item(item)
-                    // O expurgo apaga em até alguns dias depois da data: nota vencida ainda presente é substituída (E03-RN-06).
-                    .conditionExpression("attribute_not_exists(" + ID_PEDIDO + ") OR " + EXPIRA_EM + " <= :agora")
-                    .expressionAttributeValues(Map.of(":agora", AttributeValue.fromN(Long.toString(agora()))))));
-        } catch (ConditionalCheckFailedException e) {
-            throw new NotaJaGuardadaException();
+            // Nota e tarefas numa transação: ou tudo é gravado, ou nada (E02-RN-02).
+            chamadas.chamar("guardar", () -> dynamoDb.transactWriteItems(requisicao -> requisicao.transactItems(gravacoes)));
+        } catch (TransactionCanceledException e) {
+            throw motivo(e);
         } catch (TransactionConflictException e) {
             throw new ConflitoDeGravacaoException(e);
         }
     }
 
+    private RuntimeException motivo(TransactionCanceledException e) {
+        List<String> codigos = e.cancellationReasons().stream().map(CancellationReason::code).toList();
+        if (codigos.contains("ConditionalCheckFailed")) {
+            return new NotaJaGuardadaException();
+        }
+        if (codigos.contains("TransactionConflict")) {
+            return new ConflitoDeGravacaoException(e);
+        }
+        if (codigos.contains("ThrottlingError") || codigos.contains("ProvisionedThroughputExceeded")) {
+            return chamadas.indisponivel("guardar", e);
+        }
+        return e;
+    }
+
     @Override
     public Optional<NotaGuardada> buscar(Long idPedido) {
-        Map<String, AttributeValue> item = chamar("buscar", () -> dynamoDb.getItem(requisicao -> requisicao
+        Map<String, AttributeValue> item = chamadas.chamar("buscar", () -> dynamoDb.getItem(requisicao -> requisicao
                 .tableName(tabela)
                 .key(Map.of(ID_PEDIDO, AttributeValue.fromN(idPedido.toString())))
                 .consistentRead(true))).item();
@@ -111,27 +143,6 @@ public class NotaFiscalDynamoAdapter implements NotaFiscalPersistenciaPort {
 
     private long agora() {
         return relogio.instant().getEpochSecond();
-    }
-
-    // Falha de conexão, erro do serviço ou limite de vazão, depois das novas tentativas do SDK, é indisponibilidade (E04-RN-01).
-    private <T> T chamar(String operacao, Supplier<T> chamada) {
-        try {
-            return chamada.get();
-        } catch (ConditionalCheckFailedException | TransactionConflictException e) {
-            throw e;
-        } catch (SdkClientException e) {
-            throw indisponivel(operacao, e);
-        } catch (DynamoDbException e) {
-            if (e.statusCode() >= 500 || e.isThrottlingException()) {
-                throw indisponivel(operacao, e);
-            }
-            throw e;
-        }
-    }
-
-    private ArmazenamentoIndisponivelException indisponivel(String operacao, Exception causa) {
-        meterRegistry.counter("armazenamento.falhas", "operacao", operacao).increment();
-        return new ArmazenamentoIndisponivelException(causa);
     }
 
     // Tamanho como o DynamoDB conta: nome e valor de cada atributo em UTF-8; o número conta no máximo o próprio texto.

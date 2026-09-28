@@ -7,25 +7,25 @@ import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
 import br.com.itau.geradornotafiscal.application.port.in.ReenvioUseCase;
 import br.com.itau.geradornotafiscal.application.port.in.ResultadoDaEmissao;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
-import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
-import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
-import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
-import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import br.com.itau.geradornotafiscal.domain.entity.Pedido;
+import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
 import br.com.itau.geradornotafiscal.domain.service.guarda.PrazoDeGuarda;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.Tributacao;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
 import br.com.itau.geradornotafiscal.domain.valueobject.Endereco;
+import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -43,10 +43,6 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
     private final PrazoDeGuarda prazoDeGuarda;
     private final NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     private final ReenvioUseCase reenvioUseCase;
-    private final EstoquePort estoquePort;
-    private final RegistroPort registroPort;
-    private final EntregaPort entregaPort;
-    private final FinanceiroPort financeiroPort;
 
     @Override
     public ResultadoDaEmissao gerarNotaFiscal(GerarNotaFiscalCommand comando) {
@@ -69,19 +65,17 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
                 calculadoraFrete.calcular(pedido.getValorFrete(), entrega.regiao()),
                 LocalDateTime.now(relogio));
 
-        // Nenhum sistema é acionado antes de a nota estar guardada (E04-RN-01, E02-RN-02).
+        // A nota e os quatro acionamentos são guardados juntos; os sistemas são acionados depois da resposta (E02-RN-01, E02-RN-02).
+        List<TarefaIntegracao> tarefas = Arrays.stream(Sistema.values())
+                .map(sistema -> TarefaIntegracao.criarPendente(pedido.getIdPedido(), sistema, relogio.instant()))
+                .toList();
         try {
             notaFiscalPersistenciaPort.guardar(pedido.getIdPedido(), notaFiscal, comando.hashPedido(),
-                    prazoDeGuarda.apagarAPartirDe(notaFiscal.getData()));
+                    prazoDeGuarda.apagarAPartirDe(notaFiscal.getData()), tarefas);
         } catch (NotaJaGuardadaException | ConflitoDeGravacaoException outroEnvioGravouAntes) {
             // Só uma gravação vence; os demais envios seguem o caminho do reenvio (E03-RN-05).
             return new ResultadoDaEmissao(notaDoOutroEnvio(comando, outroEnvioGravouAntes), true);
         }
-
-        estoquePort.enviarNotaFiscalParaBaixaEstoque(notaFiscal);
-        registroPort.registrarNotaFiscal(notaFiscal);
-        entregaPort.agendarEntrega(notaFiscal);
-        financeiroPort.enviarNotaFiscalParaContasReceber(notaFiscal);
 
         return new ResultadoDaEmissao(notaFiscal, false);
     }

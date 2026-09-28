@@ -1,6 +1,7 @@
 package br.com.itau.geradornotafiscal.adapter.out.dynamodb;
 
 import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.NotaFiscalRegistroMapper;
+import br.com.itau.geradornotafiscal.adapter.out.dynamodb.mappers.TarefaIntegracaoRegistroMapper;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
 import br.com.itau.geradornotafiscal.domain.valueobject.Documento;
@@ -32,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TamanhoDaNotaTest {
 
     private final NotaFiscalDynamoAdapter adapter =
-            new NotaFiscalDynamoAdapter(null, new NotaFiscalRegistroMapper(), new SimpleMeterRegistry(), Clock.systemUTC(), "notas");
+            new NotaFiscalDynamoAdapter(null, new NotaFiscalRegistroMapper(), new TarefaIntegracaoRegistroMapper(),
+                    new ChamadasDynamoDb(new SimpleMeterRegistry()), Clock.systemUTC(), "notas", "tarefas_integracao");
 
     @ParameterizedTest(name = "E04-NF-06: {0} linhas com o caractere ''{1}'' cabem? {2}")
     @CsvSource({

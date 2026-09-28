@@ -37,6 +37,12 @@ class ArquiteturaTest {
             .because("a aplicação define as portas e não conhece as implementações (ADR-0003)");
 
     @ArchTest
+    static final ArchRule e02Nf12_aplicacaoEDominioNaoConhecemOSdkDaAws = noClasses()
+            .that().resideInAnyPackage("..application..", "..domain..")
+            .should().dependOnClassesThat().resideInAPackage("software.amazon..")
+            .because("banco e filas só nos adaptadores; aplicação e domínio conhecem só as portas (E02-NF-12, E04-NF-03)");
+
+    @ArchTest
     static final ArchRule f03Nf01_entradaNaoDependeDaSaida = noClasses()
             .that().resideInAPackage("..adapter.in..")
             .should().dependOnClassesThat().resideInAPackage("..adapter.out..");

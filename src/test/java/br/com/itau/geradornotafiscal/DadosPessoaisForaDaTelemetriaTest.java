@@ -1,9 +1,12 @@
 package br.com.itau.geradornotafiscal;
 
+import br.com.itau.geradornotafiscal.adapter.in.fila.ProcessadorDeTarefa;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
+import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -16,6 +19,7 @@ import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +32,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -81,6 +86,10 @@ class DadosPessoaisForaDaTelemetriaTest {
     private SdkLoggerProvider loggerProvider;
     @Autowired
     private MeterRegistry meterRegistry;
+    @Autowired
+    private ProcessadorDeTarefa processadorDeTarefa;
+    @MockitoSpyBean
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @MockitoBean
     private EstoquePort estoquePort;
     @MockitoBean
@@ -132,7 +141,7 @@ class DadosPessoaisForaDaTelemetriaTest {
     void f04Nf05_erroComDocumentoNaMensagemEhMascarado(CapturedOutput saida) throws Exception {
         doThrow(new IllegalStateException("falha para " + PedidoBase.CPF,
                 new IllegalArgumentException("causa " + PedidoBase.CNPJ)))
-                .when(entregaPort).agendarEntrega(any());
+                .when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
 
         enviar(PedidoBase.novo()).andExpect(status().isInternalServerError());
 
@@ -144,12 +153,25 @@ class DadosPessoaisForaDaTelemetriaTest {
     }
 
     @Test
+    @DisplayName("E02-NF-09, F04-NF-05: tarefa cujo sistema falha com dado pessoal na mensagem não leva o dado a log, span nem tarefa")
+    void e02Nf09_tarefaSemDadoPessoal(CapturedOutput saida) throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        enviar(pedido).andExpect(status().isOk());
+        doThrow(new IllegalStateException("destinatário Fulano de Tal, " + PedidoBase.CPF))
+                .when(entregaPort).agendarEntrega(any());
+
+        processadorDeTarefa.processar(pedido.get("id_pedido").longValue(), Sistema.ENTREGA);
+
+        assertSemDadoPessoal(saida);
+    }
+
+    @Test
     void f04Nf03_cadaLinhaComTraceIdESpanId(CapturedOutput saida) throws Exception {
         ObjectNode recusado = PedidoBase.novo();
         recusado.put("valor_frete", -1);
         enviar(PedidoBase.novo()).andExpect(status().isOk());
         enviar(recusado).andExpect(status().isBadRequest());
-        doThrow(new IllegalStateException("falha")).when(entregaPort).agendarEntrega(any());
+        doThrow(new IllegalStateException("falha")).when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
         enviar(PedidoBase.novo()).andExpect(status().isInternalServerError());
 
         List<String> mensagens = List.of("Nota fiscal emitida", "Pedido recusado", "Erro inesperado ao gerar a nota fiscal");

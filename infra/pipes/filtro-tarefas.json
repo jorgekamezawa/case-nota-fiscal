@@ -1,0 +1,10 @@
+{
+  "dynamodb": {
+    "NewImage": {
+      "sistema": { "S": ["${sistema}"] }
+    },
+    "OldImage": {
+      "status": { "S": [{ "exists": false }] }
+    }
+  }
+}

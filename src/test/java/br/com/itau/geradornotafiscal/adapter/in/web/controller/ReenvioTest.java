@@ -2,11 +2,7 @@ package br.com.itau.geradornotafiscal.adapter.in.web.controller;
 
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
-import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
-import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
-import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
-import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +14,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
@@ -49,7 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 /**
- * Exemplos do E-03 pelo endpoint, com a nota guardada no emulador do DynamoDB e as integrações simuladas por mock.
+ * Exemplos do E-03 pelo endpoint, com a nota guardada no emulador do DynamoDB.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -65,14 +60,6 @@ class ReenvioTest {
 
     @MockitoSpyBean
     private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
-    @MockitoBean
-    private EstoquePort estoquePort;
-    @MockitoBean
-    private RegistroPort registroPort;
-    @MockitoBean
-    private EntregaPort entregaPort;
-    @MockitoBean
-    private FinanceiroPort financeiroPort;
 
     static Stream<Arguments> mesmoConteudo() {
         return Stream.of(
@@ -101,10 +88,8 @@ class ReenvioTest {
         assertEquals(200, reenvio.getStatus());
         assertEquals(primeira.getContentAsString(StandardCharsets.UTF_8), reenvio.getContentAsString(StandardCharsets.UTF_8));
         assertEquals(emitidas, meterRegistry.counter("notas.emitidas").count(), "E03-NF-04: reenvio não é nota emitida");
-        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(any());
-        verify(registroPort, times(1)).registrarNotaFiscal(any());
-        verify(entregaPort, times(1)).agendarEntrega(any());
-        verify(financeiroPort, times(1)).enviarNotaFiscalParaContasReceber(any());
+        // Uma gravação só, então as tarefas dos sistemas foram criadas uma vez (E02-RN-02).
+        verify(notaFiscalPersistenciaPort, times(1)).guardar(any(), any(), any(), any(), any());
     }
 
     static Stream<Arguments> conteudoDiferente() {
@@ -149,7 +134,7 @@ class ReenvioTest {
         assertFalse(corpo.contains("887"), corpo);
         assertFalse(corpo.contains(JSON.readTree(nota).get("id_nota_fiscal").asString()), corpo);
         assertEquals(recusas + 1, meterRegistry.counter("recusas", "type", "/erros/pedido-divergente").count());
-        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(any());
+        verify(notaFiscalPersistenciaPort, times(1)).guardar(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -198,11 +183,10 @@ class ReenvioTest {
         long idPedido = pedido.get("id_pedido").longValue();
         doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException()))
                 .doCallRealMethod()
-                .when(notaFiscalPersistenciaPort).guardar(eq(idPedido), any(), any(), any());
+                .when(notaFiscalPersistenciaPort).guardar(eq(idPedido), any(), any(), any(), any());
 
         assertEquals(503, enviar(pedido.toString()).getStatus());
         assertEquals(200, enviar(pedido.toString()).getStatus());
-        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(any());
     }
 
     @Test
@@ -215,8 +199,7 @@ class ReenvioTest {
         assertEquals(200, respostas.get(0).getStatus());
         assertEquals(200, respostas.get(1).getStatus());
         assertEquals(idDaNota(respostas.get(0)), idDaNota(respostas.get(1)));
-        verify(notaFiscalPersistenciaPort, times(2)).guardar(eq(pedido.get("id_pedido").longValue()), any(), any(), any());
-        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(any());
+        verify(notaFiscalPersistenciaPort, times(2)).guardar(eq(pedido.get("id_pedido").longValue()), any(), any(), any(), any());
     }
 
     @Test
@@ -230,8 +213,7 @@ class ReenvioTest {
         List<Integer> status = new ArrayList<>(List.of(respostas.get(0).getStatus(), respostas.get(1).getStatus()));
         Collections.sort(status);
         assertEquals(List.of(200, 422), status);
-        verify(notaFiscalPersistenciaPort, times(2)).guardar(eq(pedido.get("id_pedido").longValue()), any(), any(), any());
-        verify(estoquePort, times(1)).enviarNotaFiscalParaBaixaEstoque(any());
+        verify(notaFiscalPersistenciaPort, times(2)).guardar(eq(pedido.get("id_pedido").longValue()), any(), any(), any(), any());
     }
 
     // Os dois envios só procuram a nota depois de os dois chegarem: nenhum a encontra, e as duas gravações disputam.

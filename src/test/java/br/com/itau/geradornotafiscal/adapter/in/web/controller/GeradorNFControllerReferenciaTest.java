@@ -6,6 +6,7 @@ import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
@@ -20,6 +21,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
@@ -74,6 +76,8 @@ class GeradorNFControllerReferenciaTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoSpyBean
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @MockitoBean
     private EstoquePort estoquePort;
     @MockitoBean
@@ -101,8 +105,8 @@ class GeradorNFControllerReferenciaTest {
     @MethodSource("casos")
     void f02Nf02_respostaIgualAReferencia(String caso, String url, String corpo, boolean integracaoFalha) throws Exception {
         if (integracaoFalha) {
-            doThrow(new IllegalStateException("falha interna do estoque"))
-                    .when(estoquePort).enviarNotaFiscalParaBaixaEstoque(any());
+            doThrow(new IllegalStateException("falha interna do armazenamento"))
+                    .when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
         }
 
         MockHttpServletResponse resposta = mockMvc.perform(post(url).contentType(MediaType.APPLICATION_JSON).content(corpo))

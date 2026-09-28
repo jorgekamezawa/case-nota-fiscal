@@ -1,0 +1,1 @@
+{"id_pedido": "<$.dynamodb.NewImage.id_pedido.N>", "sistema": "<$.dynamodb.NewImage.sistema.S>"}
