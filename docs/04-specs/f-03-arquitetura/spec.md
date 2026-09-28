@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) (habilitador técnico) |
 | **Fase** | 3 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Decisão** | [ADR-0003](../../03-engenharia/adr/0003-arquitetura-hexagonal-enxuta.md) |
 
 ## Objetivo

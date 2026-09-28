@@ -1,6 +1,7 @@
 package br.com.itau.geradornotafiscal.adapter.in.web.controller;
 
 import br.com.itau.geradornotafiscal.PedidoBase;
+import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -33,6 +35,8 @@ import static br.com.itau.geradornotafiscal.PedidoBase.pj;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,6 +55,9 @@ class GeradorNFControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoSpyBean
+    private GerarNotaFiscalUseCase gerarNotaFiscalUseCase;
 
     @MockitoBean
     private EstoquePort estoquePort;
@@ -127,11 +134,43 @@ class GeradorNFControllerTest {
     }
 
     @Test
+    @DisplayName("E01 validação #23 (E01-RN-09, E01-RN-10, F03-NF-09): sem destinatário, a etapa 1 recusa sozinha e o caso de uso não é chamado")
+    void e01Validacao23_etapa1RecusaSemChamarCasoDeUso() throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        pedido.remove("destinatario");
+        pedido.put("valor_frete", new BigDecimal("-5.00"));
+
+        enviar(pedido)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.length()").value(1))
+                .andExpect(jsonPath("$.campos[0].campo").value("destinatario"))
+                .andExpect(jsonPath("$.campos[0].type").value("/erros/campo-obrigatorio"));
+        verify(gerarNotaFiscalUseCase, never()).gerarNotaFiscal(any());
+        verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
+    }
+
+    @Test
+    @DisplayName("E01-RN-09, F03-NF-09: dois erros de tipo no mesmo pedido, a recusa traz um por vez e o caso de uso não é chamado")
+    void e01Rn09_errosDeTipoUmPorVez() throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        ((ObjectNode) pedido.get("itens").get(0)).put("quantidade", "2");
+        pedido.put("data", "x");
+
+        enviar(pedido)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("/erros/pedido-invalido"))
+                .andExpect(jsonPath("$.campos.length()").value(1))
+                .andExpect(jsonPath("$.campos[0].type").value("/erros/formato-invalido"));
+        verify(gerarNotaFiscalUseCase, never()).gerarNotaFiscal(any());
+    }
+
+    @Test
     @DisplayName("E01 cálculo #27 (E01-RN-17): documento devolvido como enviado, sem a limpeza")
     void e01Calculo27_documentoDevolvidoSemLimpeza() throws Exception {
         enviar(PedidoBase.novo())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.destinatario.documentos[0].numero").value(PedidoBase.CPF));
+        verify(gerarNotaFiscalUseCase).gerarNotaFiscal(any());
     }
 
     @Test
