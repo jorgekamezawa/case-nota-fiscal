@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) |
 | **Fase** | 5 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Regras de negócio** | [Levantamento](../../01-levantamento/levantamento-regras-negocio.md) |
 | **Decisão** | [ADR-0014](../../03-engenharia/adr/0014-reenvio-por-id-pedido-e-hash.md) |
 

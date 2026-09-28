@@ -20,6 +20,7 @@ import br.com.itau.geradornotafiscal.domain.valueobject.TipoPessoa;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,8 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
@@ -161,6 +164,22 @@ class NotaFiscalDynamoAdapterTest {
 
         assertThatThrownBy(() -> comConflito.guardar(PedidoBase.novoId(), nota(1, "Teclado USB"), HASH, APAGAR_EM, List.of()))
                 .isInstanceOf(ConflitoDeGravacaoException.class);
+    }
+
+    @Test
+    @DisplayName("E03-NF-01: a nota existente é lida com leitura fortemente consistente (simulado: o emulador não a diferencia)")
+    void e03Nf01_leituraFortementeConsistente() {
+        DynamoDbClient cliente = mock(DynamoDbClient.class);
+        ArgumentCaptor<Consumer<GetItemRequest.Builder>> requisicao = ArgumentCaptor.captor();
+        when(cliente.getItem(requisicao.capture())).thenReturn(GetItemResponse.builder().build());
+        NotaFiscalDynamoAdapter comMock = new NotaFiscalDynamoAdapter(cliente, mapper, new TarefaIntegracaoRegistroMapper(),
+                new ChamadasDynamoDb(new SimpleMeterRegistry()), Clock.systemUTC(), "notas", "tarefas_integracao");
+
+        comMock.buscar(PedidoBase.novoId());
+
+        GetItemRequest.Builder construida = GetItemRequest.builder();
+        requisicao.getValue().accept(construida);
+        assertEquals(Boolean.TRUE, construida.build().consistentRead());
     }
 
     static NotaFiscal nota(int linhas, String descricao) {

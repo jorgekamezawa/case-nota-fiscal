@@ -98,6 +98,28 @@ class TarefaIntegracaoDynamoAdapterTest {
         assertThat(tarefas.abertasDesdeAntesDe(antiga)).noneMatch(tarefa -> tarefa.getIdPedido() == idPedido);
     }
 
+    @Test
+    @DisplayName("E03-RN-06: nota vencida substituída regrava as tarefas como pendentes, que a reconciliação encontra")
+    void e03Rn06_tarefasRegravadas() {
+        long idPedido = PedidoBase.novoId();
+        notas.guardar(idPedido, NotaFiscalDynamoAdapterTest.nota(1, "Vencida"), "a".repeat(64), LocalDate.of(2020, 1, 1),
+                pendentes(idPedido, Instant.now().minusSeconds(7200)));
+        TarefaIntegracao estoque = tarefas.buscar(idPedido, Sistema.ESTOQUE).orElseThrow();
+        TarefaIntegracao emExecucao = estoque.pegar(Instant.now());
+        tarefas.salvar(emExecucao, estoque.getVersao());
+        tarefas.salvar(emExecucao.concluir(), emExecucao.getVersao());
+        Instant novaEmissao = Instant.now().minusSeconds(3600).truncatedTo(ChronoUnit.MILLIS);
+
+        notas.guardar(idPedido, NotaFiscalDynamoAdapterTest.nota(1, "Nova"), "b".repeat(64), APAGAR_EM,
+                pendentes(idPedido, novaEmissao));
+
+        TarefaIntegracao regravada = tarefas.buscar(idPedido, Sistema.ESTOQUE).orElseThrow();
+        assertEquals(StatusTarefa.PENDENTE, regravada.getStatus());
+        assertEquals(novaEmissao, regravada.getPendenteDesde());
+        assertThat(tarefas.abertasDesdeAntesDe(Instant.now().minusSeconds(60)))
+                .filteredOn(tarefa -> tarefa.getIdPedido() == idPedido).hasSize(4);
+    }
+
     static List<TarefaIntegracao> pendentes(long idPedido, Instant desde) {
         return Arrays.stream(Sistema.values()).map(sistema -> TarefaIntegracao.criarPendente(idPedido, sistema, desde)).toList();
     }

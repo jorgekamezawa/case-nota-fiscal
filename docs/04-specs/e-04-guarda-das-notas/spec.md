@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) |
 | **Fase** | 5 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Regras de negócio** | [Levantamento](../../01-levantamento/levantamento-regras-negocio.md) |
 | **Decisão** | [ADR-0012](../../03-engenharia/adr/0012-persistencia-em-dynamodb.md), [Spike-0001](../../03-engenharia/spikes/0001-persistencia-e-acionamento-das-integracoes.md) |
 

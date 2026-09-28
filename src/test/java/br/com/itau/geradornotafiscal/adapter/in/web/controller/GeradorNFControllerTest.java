@@ -268,7 +268,8 @@ class GeradorNFControllerTest {
                 .andExpect(jsonPath("$.type").value("/erros/pedido-invalido"))
                 .andExpect(jsonPath("$.campos.length()").value(1))
                 .andExpect(jsonPath("$.campos[0].campo").value("itens"))
-                .andExpect(jsonPath("$.campos[0].type").value("/erros/itens-acima-do-maximo"));
+                .andExpect(jsonPath("$.campos[0].type").value("/erros/itens-acima-do-maximo"))
+                .andExpect(jsonPath("$.campos[0].detail").value(org.hamcrest.Matchers.containsString("800")));
 
         verify(notaFiscalPersistenciaPort, never()).guardar(any(), any(), any(), any(), any());
     }
@@ -310,6 +311,18 @@ class GeradorNFControllerTest {
         enviar(comLinhas(6)).andExpect(status().isOk());
 
         verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
+    }
+
+    @Test
+    @DisplayName("E03-RN-01, E04-RN-01: recusa da etapa 1 com o armazenamento fora do ar responde 503, porque não dá para saber se é reenvio")
+    void e03Rn01_consultaDoReenvioSemArmazenamento() throws Exception {
+        ObjectNode pedido = PedidoBase.novo().put("valor_frete", "10.00");
+        doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException()))
+                .when(notaFiscalPersistenciaPort).buscar(anyLong());
+
+        enviar(pedido)
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.type").value("/erros/servico-indisponivel"));
     }
 
     private static ObjectNode comLinhas(int linhas) {

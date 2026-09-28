@@ -1,10 +1,13 @@
 package br.com.itau.geradornotafiscal;
 
+import br.com.itau.geradornotafiscal.adapter.in.fila.ProcessadorDeTarefa;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
+import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +45,8 @@ class LogPorRequisicaoTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private ProcessadorDeTarefa processadorDeTarefa;
     @MockitoSpyBean
     private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @MockitoBean
@@ -97,6 +102,41 @@ class LogPorRequisicaoTest {
         JsonNode erro = linha(saida, "Erro inesperado ao gerar a nota fiscal").get("error");
         assertThat(erro.get("type").asString()).isEqualTo(IllegalStateException.class.getName());
         assertThat(erro.get("stack_trace").asString()).contains("armazenamento fora do ar").contains("\tat ");
+    }
+
+    @Test
+    @DisplayName("E03-NF-04: reenvio devolvido e divergência têm log próprio, com id_pedido em campo próprio e sem dado pessoal")
+    void e03Nf04_logsDoReenvio(CapturedOutput saida) throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        long idPedido = pedido.get("id_pedido").longValue();
+        enviar(pedido.toString()).andExpect(status().isOk());
+
+        enviar(pedido.toString()).andExpect(status().isOk());
+        enviar(pedido.deepCopy().put("data", "2022-05-02").toString()).andExpect(status().isUnprocessableEntity());
+
+        JsonNode devolvido = linha(saida, "Reenvio devolvido");
+        assertThat(devolvido.get("id_pedido").asString()).isEqualTo(Long.toString(idPedido));
+        assertThat(devolvido.get("id_nota_fiscal").asString()).isNotBlank();
+        JsonNode divergente = linha(saida, "Pedido divergente");
+        assertThat(divergente.get("id_pedido").asString()).isEqualTo(Long.toString(idPedido));
+        assertThat(devolvido.toString() + divergente).doesNotContain("Fulano").doesNotContain(PedidoBase.CPF);
+    }
+
+    @Test
+    @DisplayName("E02-NF-09: tarefa processada gera log com id_pedido, sistema e resultado em campos próprios, sem dado pessoal")
+    void e02Nf09_logDaTarefa(CapturedOutput saida) throws Exception {
+        ObjectNode pedido = PedidoBase.novo();
+        long idPedido = pedido.get("id_pedido").longValue();
+        enviar(pedido.toString()).andExpect(status().isOk());
+
+        processadorDeTarefa.processar(idPedido, Sistema.FINANCEIRO);
+
+        JsonNode log = linha(saida, "Tarefa processada");
+        assertThat(log.get("id_pedido").asString()).isEqualTo(Long.toString(idPedido));
+        assertThat(log.get("sistema").asString()).isEqualTo("FINANCEIRO");
+        assertThat(log.get("resultado").asString()).isEqualTo("CONCLUIDA");
+        assertThat(log.get("message").asString()).doesNotContain(Long.toString(idPedido));
+        assertThat(log.toString()).doesNotContain("Fulano").doesNotContain(PedidoBase.CPF);
     }
 
     private ResultActions enviar(String corpo) throws Exception {
