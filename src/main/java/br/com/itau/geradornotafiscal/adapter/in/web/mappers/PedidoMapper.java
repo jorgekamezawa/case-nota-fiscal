@@ -21,14 +21,15 @@ import java.util.function.Function;
 @Component
 public class PedidoMapper {
 
-    public GerarNotaFiscalCommand paraComando(PedidoRequest pedido) {
+    public GerarNotaFiscalCommand paraComando(PedidoRequest pedido, String hashPedido) {
         return new GerarNotaFiscalCommand(
                 pedido.idPedido(),
                 pedido.data(),
                 pedido.valorTotalItens(),
                 pedido.valorFrete(),
                 lista(pedido.itens(), PedidoMapper::item),
-                destinatario(pedido.destinatario()));
+                destinatario(pedido.destinatario()),
+                hashPedido);
     }
 
     private static Item item(ItemRequest item) {

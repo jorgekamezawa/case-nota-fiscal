@@ -1,5 +1,6 @@
 package br.com.itau.geradornotafiscal.adapter.in.web.controller;
 
+import br.com.itau.geradornotafiscal.PedidoBase;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -98,7 +99,7 @@ class GeradorNFControllerContratoTest {
     @ValueSource(strings = {"payloads/teste-pf.json", "payloads/teste-pj-simples.json"})
     @DisplayName("E01-NF-01, E01-NF-02: pedido atual aceito e resposta com os mesmos campos e tipos")
     void e01Nf01_e01Nf02_contratoDeSucesso(String arquivo) throws Exception {
-        String pedido = StreamUtils.copyToString(new ClassPathResource(arquivo).getInputStream(), StandardCharsets.UTF_8);
+        String pedido = PedidoBase.comIdNovo(StreamUtils.copyToString(new ClassPathResource(arquivo).getInputStream(), StandardCharsets.UTF_8));
 
         String resposta = mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(pedido))
                 .andExpect(status().isOk())
@@ -130,7 +131,7 @@ class GeradorNFControllerContratoTest {
     @Test
     @DisplayName("E01-NF-03: recusa responde 400 em Problem Details com a lista de campos")
     void e01Nf03_contratoDeRecusa() throws Exception {
-        String pedido = StreamUtils.copyToString(new ClassPathResource("payloads/teste-pf.json").getInputStream(), StandardCharsets.UTF_8)
+        String pedido = PedidoBase.comIdNovo(StreamUtils.copyToString(new ClassPathResource("payloads/teste-pf.json").getInputStream(), StandardCharsets.UTF_8))
                 .replace("\"valor_frete\": 10.0", "\"valor_frete\": -5.0");
 
         String resposta = mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(pedido))

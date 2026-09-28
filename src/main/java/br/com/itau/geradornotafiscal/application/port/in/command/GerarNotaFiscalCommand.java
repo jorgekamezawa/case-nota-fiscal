@@ -8,7 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Dados do pedido que já passaram no preenchimento e no formato (etapa 1 da E01-RN-09).
+ * Dados do pedido que já passaram no preenchimento e no formato (etapa 1 da E01-RN-09), com o hash do pedido
+ * recebido para reconhecer o reenvio (E03-NF-02).
  */
 public record GerarNotaFiscalCommand(
         Long idPedido,
@@ -16,5 +17,6 @@ public record GerarNotaFiscalCommand(
         BigDecimal valorTotalItens,
         BigDecimal valorFrete,
         List<Item> itens,
-        Destinatario destinatario) {
+        Destinatario destinatario,
+        String hashPedido) {
 }

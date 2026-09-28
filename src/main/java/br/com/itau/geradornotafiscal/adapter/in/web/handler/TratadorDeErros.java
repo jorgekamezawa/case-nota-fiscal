@@ -1,8 +1,15 @@
 package br.com.itau.geradornotafiscal.adapter.in.web.handler;
 
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.response.RespostaProblema;
+import br.com.itau.geradornotafiscal.adapter.in.web.mappers.NotaFiscalMapper;
+import br.com.itau.geradornotafiscal.adapter.in.web.reenvio.LeitorDoCorpo;
+import br.com.itau.geradornotafiscal.adapter.in.web.reenvio.PedidoRecebido;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacaoEntrada;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacoesDeEntrada;
+import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
+import br.com.itau.geradornotafiscal.domain.exception.PedidoDivergenteException;
+import br.com.itau.geradornotafiscal.application.port.in.ReenvioUseCase;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.ConstraintViolation;
@@ -17,6 +24,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import tools.jackson.core.JacksonException;
@@ -26,7 +34,8 @@ import java.util.Optional;
 
 /**
  * Converte recusas e erros em Problem Details (E01-NF-03). As duas etapas da validação (E01-RN-09) respondem
- * o mesmo `pedido-invalido`. Os demais erros do Spring MVC (405, 415 etc.)
+ * o mesmo `pedido-invalido`, exceto quando o pedido já tem nota: aí vale o reenvio (E03-RN-01). Os demais erros do
+ * Spring MVC (405, 415 etc.)
  * seguem o tratamento padrão da classe base.
  */
 @Slf4j
@@ -37,6 +46,8 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     private static final String PREFIXO_TYPE = "/erros/";
 
     private final MeterRegistry meterRegistry;
+    private final ReenvioUseCase reenvioUseCase;
+    private final NotaFiscalMapper notaFiscalMapper;
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException e, HttpHeaders headers,
@@ -44,7 +55,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
         List<ConstraintViolation<?>> violacoes = e.getBindingResult().getAllErrors().stream()
                 .<ConstraintViolation<?>>map(erro -> erro.unwrap(ConstraintViolation.class))
                 .toList();
-        return entradaInvalida(ViolacoesDeEntrada.deAnotacoes(violacoes));
+        return reenvio(request).orElseGet(() -> entradaInvalida(ViolacoesDeEntrada.deAnotacoes(violacoes)));
     }
 
     @ExceptionHandler(PedidoInvalidoException.class)
@@ -79,10 +90,50 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
                                                                   HttpStatusCode status, WebRequest request) {
         Optional<ViolacaoEntrada> erroDeTipo = erroDoJackson(e).flatMap(ViolacoesDeEntrada::deConversao);
         if (erroDeTipo.isPresent()) {
-            return entradaInvalida(List.of(erroDeTipo.get()));
+            return reenvio(request).orElseGet(() -> entradaInvalida(List.of(erroDeTipo.get())));
         }
         return problema(HttpStatus.BAD_REQUEST, "json-invalido", "Corpo inválido",
                 "O corpo da requisição não é um pedido em JSON válido.", List.of());
+    }
+
+    // Recusa da etapa 1 com id_pedido legível: se o pedido já tem nota, vale o reenvio, sem conferir o restante (Q-15).
+    private Optional<ResponseEntity<Object>> reenvio(WebRequest request) {
+        if (!(request.getAttribute(LeitorDoCorpo.ATRIBUTO, RequestAttributes.SCOPE_REQUEST) instanceof PedidoRecebido recebido)
+                || recebido.idPedido() == null) {
+            return Optional.empty();
+        }
+        try {
+            return reenvioUseCase.executar(recebido.idPedido(), recebido.hashPedido()).map(nota -> {
+                log.atInfo().addKeyValue("id_pedido", recebido.idPedido()).addKeyValue("id_nota_fiscal", nota.getIdNotaFiscal())
+                        .log("Reenvio devolvido");
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(notaFiscalMapper.paraResponse(nota));
+            });
+        } catch (PedidoDivergenteException e) {
+            return Optional.of(pedidoDivergente(e));
+        } catch (ArmazenamentoIndisponivelException e) {
+            return Optional.of(armazenamentoIndisponivel(e));
+        }
+    }
+
+    @ExceptionHandler(PedidoDivergenteException.class)
+    public ResponseEntity<Object> pedidoDivergente(PedidoDivergenteException e) {
+        log.atInfo().addKeyValue("id_pedido", e.idPedido()).log("Pedido divergente");
+        return problema(HttpStatus.UNPROCESSABLE_ENTITY, "pedido-divergente", "Pedido divergente",
+                "Já existe nota para este id_pedido, emitida para um pedido com outro conteúdo.", List.of());
+    }
+
+    @ExceptionHandler(NotaGrandeDemaisException.class)
+    public ResponseEntity<Object> notaGrandeDemais(NotaGrandeDemaisException e) {
+        return problema(HttpStatus.BAD_REQUEST, "pedido-grande-demais", "Pedido grande demais",
+                "A nota do pedido passa do tamanho que o serviço consegue guardar.", List.of());
+    }
+
+    // Nada foi guardado: o consumidor pode reenviar o pedido (E04-RN-01, E04-NF-02).
+    @ExceptionHandler(ArmazenamentoIndisponivelException.class)
+    public ResponseEntity<Object> armazenamentoIndisponivel(ArmazenamentoIndisponivelException e) {
+        log.warn("Armazenamento das notas indisponível", e);
+        return problema(HttpStatus.SERVICE_UNAVAILABLE, "servico-indisponivel", "Serviço indisponível",
+                "Não foi possível guardar a nota; tente novamente.", List.of());
     }
 
     @ExceptionHandler(Exception.class)
@@ -94,8 +145,8 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     private ResponseEntity<Object> problema(HttpStatus status, String codigo, String titulo, String detalhe,
                                                    List<RespostaProblema.CampoInvalido> campos) {
-        if (status == HttpStatus.BAD_REQUEST) {
-            registrarRecusa(PREFIXO_TYPE + codigo, campos);
+        if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
+            registrarRecusa(status, PREFIXO_TYPE + codigo, campos);
         }
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -103,12 +154,12 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     }
 
     // Uma contagem por type distinto dos campos; sem campos (json-invalido), o type geral (F04-NF-07).
-    private void registrarRecusa(String typeGeral, List<RespostaProblema.CampoInvalido> campos) {
+    private void registrarRecusa(HttpStatus status, String typeGeral, List<RespostaProblema.CampoInvalido> campos) {
         List<String> types = campos.isEmpty()
                 ? List.of(typeGeral)
                 : campos.stream().map(RespostaProblema.CampoInvalido::type).distinct().toList();
         types.forEach(type -> meterRegistry.counter("recusas", "type", type).increment());
         // Sem id_pedido: na recusa o corpo pode nem ser legível (F04-NF-04).
-        log.atInfo().addKeyValue("status", HttpStatus.BAD_REQUEST.value()).addKeyValue("types", types).log("Pedido recusado");
+        log.atInfo().addKeyValue("status", status.value()).addKeyValue("types", types).log("Pedido recusado");
     }
 }

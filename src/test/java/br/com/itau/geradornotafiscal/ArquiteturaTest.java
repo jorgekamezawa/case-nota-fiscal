@@ -1,5 +1,6 @@
 package br.com.itau.geradornotafiscal;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -7,7 +8,9 @@ import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.constructors;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 /**
@@ -35,6 +38,25 @@ class ArquiteturaTest {
             .that().resideInAPackage("..application..")
             .should().dependOnClassesThat().resideInAnyPackage("..adapter..", "..config..")
             .because("a aplicação define as portas e não conhece as implementações (ADR-0003)");
+
+    @ArchTest
+    static final ArchRule e02Nf12_aplicacaoEDominioNaoConhecemOSdkDaAws = noClasses()
+            .that().resideInAnyPackage("..application..", "..domain..")
+            .should().dependOnClassesThat().resideInAPackage("software.amazon..")
+            .because("banco e filas só nos adaptadores; aplicação e domínio conhecem só as portas (E02-NF-12, E04-NF-03)");
+
+    @ArchTest
+    static final ArchRule casoDeUsoTemSoOMetodoExecutar = methods()
+            .that().areDeclaredInClassesThat().resideInAPackage("..application.port.in")
+            .and().areDeclaredInClassesThat().haveSimpleNameEndingWith("UseCase")
+            .should().haveName("executar")
+            .because("o nome do caso de uso já diz o que ele faz; um método só (src/CLAUDE.md)");
+
+    @ArchTest
+    static final ArchRule casoDeUsoNaoChamaOutroCasoDeUso = noFields()
+            .that().areDeclaredInClassesThat().resideInAPackage("..application.usecase..")
+            .should().haveRawType(JavaClass.Predicates.simpleNameEndingWith("UseCase"))
+            .because("regra compartilhada entre casos de uso fica no domínio (src/CLAUDE.md)");
 
     @ArchTest
     static final ArchRule f03Nf01_entradaNaoDependeDaSaida = noClasses()

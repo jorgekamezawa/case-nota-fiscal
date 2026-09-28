@@ -6,6 +6,7 @@ import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
@@ -20,6 +21,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
@@ -74,6 +76,8 @@ class GeradorNFControllerReferenciaTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoSpyBean
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
     @MockitoBean
     private EstoquePort estoquePort;
     @MockitoBean
@@ -89,20 +93,20 @@ class GeradorNFControllerReferenciaTest {
         exemplo22.put("valor_frete", new BigDecimal("-5.00"));
 
         return Stream.of(
-                Arguments.of("sucesso-pf", ENDPOINT, recurso("payloads/teste-pf.json"), false),
-                Arguments.of("sucesso-pj", ENDPOINT, recurso("payloads/teste-pj-simples.json"), false),
-                Arguments.of("sucesso-barra-final", ENDPOINT + "/", recurso("payloads/teste-pf.json"), false),
+                Arguments.of("sucesso-pf", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), false),
+                Arguments.of("sucesso-pj", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pj-simples.json")), false),
+                Arguments.of("sucesso-barra-final", ENDPOINT + "/", PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), false),
                 Arguments.of("recusa-exemplo-22", ENDPOINT, exemplo22.toString(), false),
                 Arguments.of("corpo-nao-json", ENDPOINT, "texto", false),
-                Arguments.of("erro-inesperado", ENDPOINT, recurso("payloads/teste-pf.json"), true));
+                Arguments.of("erro-inesperado", ENDPOINT, PedidoBase.comIdNovo(recurso("payloads/teste-pf.json")), true));
     }
 
     @ParameterizedTest(name = "F02-NF-02: {0}")
     @MethodSource("casos")
     void f02Nf02_respostaIgualAReferencia(String caso, String url, String corpo, boolean integracaoFalha) throws Exception {
         if (integracaoFalha) {
-            doThrow(new IllegalStateException("falha interna do estoque"))
-                    .when(estoquePort).enviarNotaFiscalParaBaixaEstoque(any());
+            doThrow(new IllegalStateException("falha interna do armazenamento"))
+                    .when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
         }
 
         MockHttpServletResponse resposta = mockMvc.perform(post(url).contentType(MediaType.APPLICATION_JSON).content(corpo))

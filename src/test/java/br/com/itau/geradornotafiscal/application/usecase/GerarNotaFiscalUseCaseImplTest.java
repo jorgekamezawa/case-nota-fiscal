@@ -4,16 +4,23 @@ import tools.jackson.databind.json.JsonMapper;
 import br.com.itau.geradornotafiscal.PedidoBase;
 import br.com.itau.geradornotafiscal.adapter.in.web.dto.request.PedidoRequest;
 import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
-import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
-import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
-import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;
-import br.com.itau.geradornotafiscal.application.port.out.RegistroPort;
+import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
+import br.com.itau.geradornotafiscal.application.exception.ConflitoDeGravacaoException;
+import br.com.itau.geradornotafiscal.application.exception.NotaJaGuardadaException;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoDaEmissao;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
+import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort.NotaGuardada;
 import br.com.itau.geradornotafiscal.domain.valueobject.Item;
 import br.com.itau.geradornotafiscal.domain.valueobject.ItemNotaFiscal;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
+import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
+import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
+import br.com.itau.geradornotafiscal.domain.valueobject.StatusTarefa;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
+import br.com.itau.geradornotafiscal.domain.service.guarda.PrazoDeGuarda;
+import br.com.itau.geradornotafiscal.domain.service.reenvio.RegraDoReenvio;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroPresumido;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraLucroReal;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.RegraPessoaFisica;
@@ -29,14 +36,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -56,12 +66,16 @@ import static br.com.itau.geradornotafiscal.PedidoBase.itens;
 import static br.com.itau.geradornotafiscal.PedidoBase.pj;
 import static br.com.itau.geradornotafiscal.PedidoBase.umItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GerarNotaFiscalUseCaseImplTest {
@@ -71,13 +85,9 @@ class GerarNotaFiscalUseCaseImplTest {
     private static final Clock RELOGIO = Clock.fixed(Instant.parse("2026-01-15T15:30:00Z"), SAO_PAULO);
 
     @Mock
-    private EstoquePort estoquePort;
-    @Mock
-    private RegistroPort registroPort;
-    @Mock
-    private EntregaPort entregaPort;
-    @Mock
-    private FinanceiroPort financeiroPort;
+    private NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
+    @Captor
+    private ArgumentCaptor<List<TarefaIntegracao>> tarefas;
 
     private GerarNotaFiscalUseCaseImpl service;
 
@@ -85,7 +95,7 @@ class GerarNotaFiscalUseCaseImplTest {
     void setUp() {
         Tributacao tributacao = new Tributacao(List.of(
                 new RegraPessoaFisica(), new RegraSimplesNacional(), new RegraLucroReal(), new RegraLucroPresumido()));
-        service = new GerarNotaFiscalUseCaseImpl(tributacao, new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, estoquePort, registroPort, entregaPort, financeiroPort);
+        service = new GerarNotaFiscalUseCaseImpl(tributacao, new CalculadoraTributo(), new CalculadoraFrete(), RELOGIO, new PrazoDeGuarda(), notaFiscalPersistenciaPort, new RegraDoReenvio());
     }
 
     static Stream<Arguments> exemplosDeCalculo() {
@@ -131,7 +141,7 @@ class GerarNotaFiscalUseCaseImplTest {
     void e01ExemplosDeCalculo(String exemplo, UnaryOperator<ObjectNode> mudanca, List<String> tributos, String frete) {
         GerarNotaFiscalCommand pedido = pedido(mudanca.apply(PedidoBase.novo()));
 
-        NotaFiscal nota = service.gerarNotaFiscal(pedido);
+        NotaFiscal nota = service.executar(pedido).nota();
 
         if (tributos != null) {
             assertEquals(tributos, nota.getItens().stream()
@@ -159,7 +169,7 @@ class GerarNotaFiscalUseCaseImplTest {
         TimeZone fusoDaMaquina = TimeZone.getDefault();
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"));
         try {
-            NotaFiscal nota = service.gerarNotaFiscal(pedido(PedidoBase.novo()));
+            NotaFiscal nota = service.executar(pedido(PedidoBase.novo())).nota();
 
             assertEquals(LocalDateTime.of(2026, 1, 15, 12, 30), nota.getData());
         } finally {
@@ -168,30 +178,109 @@ class GerarNotaFiscalUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("E01-NF-05: dez chamadas seguidas do mesmo pedido, a entrega recebe 1 linha de item em cada")
-    void e01Nf05_chamadasSeguidasNaoAumentamItensDaEntrega() {
+    @DisplayName("E02-RN-01, E02-RN-02, E04-RN-03: a nota é guardada com a data de expurgo e uma tarefa pendente por sistema, e a resposta não espera os sistemas")
+    void e02Rn02_notaGuardadaComQuatroTarefasPendentes() {
         GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
 
+        NotaFiscal nota = service.executar(pedido).nota();
+
+        verify(notaFiscalPersistenciaPort).guardar(eq(pedido.idPedido()), eq(nota), eq(pedido.hashPedido()),
+                eq(LocalDate.of(2032, 1, 1)), tarefas.capture());
+        assertEquals(List.of(Sistema.values()), tarefas.getValue().stream().map(TarefaIntegracao::getSistema).toList());
+        tarefas.getValue().forEach(tarefa -> {
+            assertEquals(StatusTarefa.PENDENTE, tarefa.getStatus());
+            assertEquals(pedido.idPedido(), tarefa.getIdPedido());
+            assertEquals(RELOGIO.instant(), tarefa.getPendenteDesde());
+        });
+    }
+
+    @Test
+    @DisplayName("E04-RN-01: se a nota não é guardada, a recusa chega ao consumidor")
+    void e04Rn01_semGuarda() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+        doThrow(new ArmazenamentoIndisponivelException(new IllegalStateException()))
+                .when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
+
+        assertThrows(ArmazenamentoIndisponivelException.class, () -> service.executar(pedido));
+    }
+
+    @Test
+    @DisplayName("E01-NF-05: dez chamadas seguidas do mesmo conteúdo geram notas de 1 linha de item cada")
+    void e01Nf05_chamadasSeguidasNaoAumentamItens() {
         for (int chamada = 0; chamada < 10; chamada++) {
-            service.gerarNotaFiscal(pedido);
+            service.executar(pedido(PedidoBase.novo()));
         }
 
         ArgumentCaptor<NotaFiscal> notas = ArgumentCaptor.forClass(NotaFiscal.class);
-        verify(entregaPort, times(10)).agendarEntrega(notas.capture());
+        verify(notaFiscalPersistenciaPort, times(10)).guardar(any(), notas.capture(), any(), any(), any());
         notas.getAllValues().forEach(nota -> assertEquals(1, nota.getItens().size()));
     }
 
     @Test
-    @DisplayName("E01 cálculo #28 (E01-RN-17, E01-RN-18): mesmo pedido duas vezes gera duas notas, cada uma com 1 item")
+    @DisplayName("E01 cálculo #28, substituído pelo E03 exemplo 1 (E03-RN-02): mesmo pedido duas vezes devolve a mesma nota, com 1 item, e cria as tarefas uma vez")
     void e01Calculo28_mesmoPedidoDuasVezes() {
         GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
 
-        NotaFiscal primeira = service.gerarNotaFiscal(pedido);
-        NotaFiscal segunda = service.gerarNotaFiscal(pedido);
+        NotaFiscal primeira = service.executar(pedido).nota();
+        when(notaFiscalPersistenciaPort.buscar(pedido.idPedido())).thenReturn(Optional.of(new NotaGuardada(primeira, pedido.hashPedido())));
+        ResultadoDaEmissao segunda = service.executar(pedido);
 
-        assertNotEquals(primeira.getIdNotaFiscal(), segunda.getIdNotaFiscal());
-        assertEquals(1, primeira.getItens().size());
-        assertEquals(1, segunda.getItens().size());
+        assertTrue(segunda.reenvio());
+        assertSame(primeira, segunda.nota());
+        assertEquals(1, segunda.nota().getItens().size());
+        verify(notaFiscalPersistenciaPort, times(1)).guardar(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("E03-RN-01 (Q-15): com nota já emitida, o pedido não é conferido de novo, mesmo que hoje fosse recusado")
+    void e03Rn01_notaJaEmitidaNaoConfereOPedido() {
+        GerarNotaFiscalCommand pedidoHojeRecusado = pedido(frete(PedidoBase.novo(), "-1.00"));
+        NotaFiscal jaEmitida = service.executar(pedido(PedidoBase.novo())).nota();
+        when(notaFiscalPersistenciaPort.buscar(pedidoHojeRecusado.idPedido()))
+                .thenReturn(Optional.of(new NotaGuardada(jaEmitida, pedidoHojeRecusado.hashPedido())));
+
+        ResultadoDaEmissao resultado = service.executar(pedidoHojeRecusado);
+
+        assertTrue(resultado.reenvio());
+        assertSame(jaEmitida, resultado.nota());
+    }
+
+    @Test
+    @DisplayName("E03-RN-05: outro envio gravou antes; a nota dele é devolvida, sem tarefas novas")
+    void e03Rn05_outroEnvioGravouAntes() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+        NotaFiscal doOutroEnvio = service.executar(pedido(PedidoBase.novo())).nota();
+        doThrow(new NotaJaGuardadaException()).when(notaFiscalPersistenciaPort).guardar(eq(pedido.idPedido()), any(), any(), any(), any());
+        when(notaFiscalPersistenciaPort.buscar(pedido.idPedido()))
+                .thenReturn(Optional.empty(), Optional.of(new NotaGuardada(doOutroEnvio, pedido.hashPedido())));
+
+        ResultadoDaEmissao resultado = service.executar(pedido);
+
+        assertTrue(resultado.reenvio());
+        assertSame(doOutroEnvio, resultado.nota());
+    }
+
+    @Test
+    @DisplayName("E03-NF-01: conflito de gravação (simulado: o emulador não o gera) tenta ler de novo até a nota do outro envio aparecer")
+    void e03Nf01_conflitoDeGravacaoTentaDeNovo() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+        NotaFiscal doOutroEnvio = service.executar(pedido(PedidoBase.novo())).nota();
+        doThrow(new ConflitoDeGravacaoException(new IllegalStateException()))
+                .when(notaFiscalPersistenciaPort).guardar(eq(pedido.idPedido()), any(), any(), any(), any());
+        when(notaFiscalPersistenciaPort.buscar(pedido.idPedido()))
+                .thenReturn(Optional.empty(), Optional.empty(), Optional.of(new NotaGuardada(doOutroEnvio, pedido.hashPedido())));
+
+        assertSame(doOutroEnvio, service.executar(pedido).nota());
+    }
+
+    @Test
+    @DisplayName("E03-NF-01, E04-NF-02: se a outra gravação não termina, responde indisponível para o consumidor reenviar")
+    void e03Nf01_conflitoQueNaoTermina() {
+        GerarNotaFiscalCommand pedido = pedido(PedidoBase.novo());
+        doThrow(new ConflitoDeGravacaoException(new IllegalStateException()))
+                .when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
+
+        assertThrows(ArmazenamentoIndisponivelException.class, () -> service.executar(pedido));
     }
 
     @Test
@@ -205,13 +294,13 @@ class GerarNotaFiscalUseCaseImplTest {
             primeiroEmAndamento.countDown();
             assertTrue(segundoConcluido.await(10, TimeUnit.SECONDS));
             return null;
-        }).doNothing().when(estoquePort).enviarNotaFiscalParaBaixaEstoque(any());
+        }).doNothing().when(notaFiscalPersistenciaPort).guardar(any(), any(), any(), any(), any());
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            Future<NotaFiscal> primeira = executor.submit(() -> service.gerarNotaFiscal(pedidoDeUmItem));
+            Future<NotaFiscal> primeira = executor.submit(() -> service.executar(pedidoDeUmItem).nota());
             assertTrue(primeiroEmAndamento.await(10, TimeUnit.SECONDS));
-            NotaFiscal segunda = service.gerarNotaFiscal(pedidoDeTresItens);
+            NotaFiscal segunda = service.executar(pedidoDeTresItens).nota();
             segundoConcluido.countDown();
 
             assertEquals(List.of("primeiro-0"), ids(primeira.get(10, TimeUnit.SECONDS)));
@@ -231,7 +320,7 @@ class GerarNotaFiscalUseCaseImplTest {
     }
 
     private static GerarNotaFiscalCommand pedido(ObjectNode json) {
-        return new PedidoMapper().paraComando(PedidoBase.converter(OBJECT_MAPPER, json, PedidoRequest.class));
+        return new PedidoMapper().paraComando(PedidoBase.converter(OBJECT_MAPPER, json, PedidoRequest.class), "hash-" + json.hashCode());
     }
 
     private static List<String> ids(NotaFiscal nota) {

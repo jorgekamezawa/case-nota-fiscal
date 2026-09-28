@@ -305,7 +305,7 @@ class ValidacaoDoPedidoTest {
     }
 
     private void criarPedido(PedidoRequest request) {
-        GerarNotaFiscalCommand comando = pedidoMapper.paraComando(request);
+        GerarNotaFiscalCommand comando = pedidoMapper.paraComando(request, "hash");
         Pedido.criar(comando.idPedido(), comando.data(), comando.valorTotalItens(), comando.valorFrete(),
                 comando.itens(), comando.destinatario());
     }

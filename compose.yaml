@@ -1,4 +1,5 @@
-# Grafana local com coletor, Prometheus, Loki e Tempo num container (ADR-0007, F04-NF-12).
+# Grafana local com coletor, Prometheus, Loki e Tempo num container (ADR-0007, F04-NF-12), e os emuladores do
+# DynamoDB e do SQS (ADR-0012, ADR-0013), sem dado guardado entre execuções.
 services:
   otel-lgtm:
     image: grafana/otel-lgtm:0.34.0
@@ -10,3 +11,12 @@ services:
       - ./observabilidade/grafana/provisionamento/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/gerador-nota-fiscal.yaml:ro
       - ./observabilidade/grafana/dashboards:/otel-lgtm/gerador-nota-fiscal/dashboards:ro
       - ./observabilidade/grafana/alertas:/otel-lgtm/grafana/conf/provisioning/alerting:ro
+  dynamodb-local:
+    image: amazon/dynamodb-local:3.3.1
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    ports:
+      - "8000:8000"
+  elasticmq:
+    image: softwaremill/elasticmq-native:1.7.1
+    ports:
+      - "9324:9324" # API compatível com o SQS

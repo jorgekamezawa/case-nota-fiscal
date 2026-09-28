@@ -6,6 +6,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Pedido base dos exemplos da spec E-01, como árvore JSON, para cada exemplo aplicar só a sua mudança.
@@ -16,13 +17,15 @@ public final class PedidoBase {
     public static final String CNPJ = "49.695.613/0001-80";
 
     private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
+    // Um id_pedido por pedido: a nota fica guardada, e o mesmo id em outro teste seria reenvio (E03-RN-01).
+    private static final AtomicLong PROXIMO_ID = new AtomicLong(1_000_000);
 
     private PedidoBase() {
     }
 
     public static ObjectNode novo() {
         ObjectNode pedido = JSON.objectNode();
-        pedido.put("id_pedido", 1);
+        pedido.put("id_pedido", novoId());
         pedido.put("data", "2022-05-01");
         pedido.set("itens", JSON.arrayNode().add(item("1", "50.00", 2)));
         pedido.put("valor_total_itens", new BigDecimal("100.00"));
@@ -34,6 +37,15 @@ public final class PedidoBase {
         destinatario.set("documentos", JSON.arrayNode().add(documento("CPF", CPF)));
         destinatario.set("enderecos", JSON.arrayNode().add(endereco("ENTREGA", "SUDESTE")));
         return pedido;
+    }
+
+    public static long novoId() {
+        return PROXIMO_ID.incrementAndGet();
+    }
+
+    /** Pedido de exemplo (`src/test/resources/payloads`) com um `id_pedido` novo no lugar do 1. */
+    public static String comIdNovo(String pedido) {
+        return pedido.replaceFirst("\"id_pedido\": 1,", "\"id_pedido\": " + novoId() + ",");
     }
 
     /** Troca o CPF pelo CNPJ e passa a pessoa jurídica com o regime indicado. */

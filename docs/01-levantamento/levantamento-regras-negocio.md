@@ -4,7 +4,7 @@
 |---|---|
 | **Autor** | Jorge Kamezawa (engenharia) |
 | **Revisor** | PO |
-| **Status** | Respondido pelo PO, com validações pendentes |
+| **Status** | Respondido pelo PO |
 | **Demanda** | [demanda.md](../00-demanda/demanda.md) |
 
 ## 1. Objetivo
@@ -288,13 +288,13 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 - **Opções:** (a) recusar, com motivo claro, o pedido acima de um máximo fixo de linhas, abaixo do limite técnico com margem; (b) recusar só quando o pedido não couber, pelo tamanho; (c) dividir o pedido em várias notas.
 - **Recomendação do time:** (a), com o máximo definido pelo maior pedido real das origens e pela medição da engenharia. Um número fixo é previsível; (b) aceitaria ou recusaria conforme o tamanho dos textos; (c) muda o que é uma nota.
 - **Resposta do PO:** Opção (a) com ajuste.
-  - Pedido com mais de 990 linhas de item é recusado, com motivo claro e sem repetir dado pessoal (Q-07).
-  - 990 é o limite de itens por nota do leiaute oficial da NF-e; o maior pedido real das origens tem 200 linhas, então nenhuma venda real é recusada.
-  - O máximo vale se a medição do limite técnico, com textos no tamanho máximo do contrato, comportar 990 linhas. Se não comportar, o caso volta ao PO antes de fixar outro número.
+  - Revista após a medição da engenharia: o máximo passou de 990 para 800 linhas, porque 990 não cabe no pior caso.
+  - Pedido com mais de 800 linhas de item é recusado, com motivo claro que informa o máximo e sem repetir dado pessoal (Q-07).
+  - 800 fica abaixo do limite de 990 itens por nota do leiaute oficial da NF-e e do limite técnico no pior caso (cerca de 846 linhas), com folga de cerca de 5%; o maior pedido real das origens tem 200 linhas, então nenhuma venda real é recusada.
   - Mesmo abaixo do máximo, pedido que não couber no armazenamento é recusado com motivo claro, nunca com erro interno. Nenhuma nota é devolvida sem estar guardada (Q-10, Q-13).
-  - **Justificativa:** número fixo é previsível para as origens; recusar pelo tamanho dos textos (b) é difícil de explicar e corrigir; dividir em várias notas (c) muda o que é uma nota, sem evidência de que ocorra.
-  - **Validado com:** Fiscal (Manual de Orientação do Contribuinte, Anexo I, campo nItem de 1 a 990); donos dos sistemas de origem (maior pedido real: 200 linhas).
-  - **Validar com:** engenharia (medição do limite técnico com textos no tamanho máximo, na implementação).
+  - **Justificativa:** número fixo é previsível para as origens; manter 990 faria o mesmo pedido ser aceito ou recusado conforme os textos, e comprimir a nota pioraria a auditoria por 5 anos para um caso sem evidência; dividir em várias notas muda o que é uma nota.
+  - **Premissa:** a medição vale para o limite de armazenamento atual e para textos até o tamanho dos campos da NF-e; se um dos dois mudar, a engenharia mede de novo e, se não couber, o caso volta ao PO.
+  - **Validado com:** Fiscal (Manual de Orientação do Contribuinte, Anexo I, campo nItem de 1 a 990); donos dos sistemas de origem (maior pedido real: 200 linhas); engenharia (medição com textos no tamanho máximo: 73% do limite sem acentos, 117% só com acentos, cerca de 846 linhas no pior caso).
 
 **Próxima fase (fora deste levantamento):** campos do endereço descartados na resposta e data da nota sem fuso horário.
 
@@ -317,7 +317,7 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 | Q-13 Guarda | Este serviço, 5 anos | Nenhum |
 | Q-14 Mesmo conteúdo | Mesmo valor em todo campo conhecido; forma não conta; texto e ordem das listas contam | Origens: reenvio com texto ou ordem diferente passa a ser recusado como divergente |
 | Q-15 Reenvio inválido pelas regras vigentes | Procurar a nota antes de validar; igual devolve, diferente recusa como divergente | Origens: reenvio legítimo recebe a nota mesmo após mudança de regra; recusa por divergência é motivo novo de recusa |
-| Q-16 Pedido grande demais | Recusar acima de 990 linhas de item, se a medição técnica comportar | Origens: pedido acima de 990 linhas, hoje aceito, passa a ser recusado; maior pedido real tem 200 |
+| Q-16 Pedido grande demais | Recusar acima de 800 linhas de item; recusa por tamanho mantida como proteção | Origens: pedido acima de 800 linhas, hoje aceito, passa a ser recusado; maior pedido real tem 200 |
 
 **Encaminhamentos fora das perguntas:**
 - **Itens de um pedido aparecendo em outro (D-01/D-03):** o DPO avalia se houve incidente a comunicar (LGPD). A correção é o conserto do defeito.

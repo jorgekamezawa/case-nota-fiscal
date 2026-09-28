@@ -1,0 +1,1 @@
+org.springframework.test.context.ContextCustomizerFactory=br.com.itau.geradornotafiscal.suporte.EmuladoresAws

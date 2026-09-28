@@ -10,7 +10,7 @@ Serviço que recebe um pedido em `POST /api/pedido/gerarNotaFiscal`, calcula o t
 
 ## Estado atual
 
-As fases 1 a 4 estão concluídas e na `main`; as fases 5 a 7 estão planejadas e decididas na RFC e nos ADRs.
+As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas na RFC e nos ADRs.
 
 | Fase | Objetivo | Status | Spec | PR |
 |---|---|---|---|---|
@@ -18,7 +18,7 @@ As fases 1 a 4 estão concluídas e na `main`; as fases 5 a 7 estão planejadas 
 | 2. Modernização | Java 21 e Spring Boot 4.1 sem mudar comportamento | Concluída | [F-02](docs/04-specs/f-02-modernizacao/spec.md) | [#2](https://github.com/jorgekamezawa/case-nota-fiscal/pull/2) |
 | 3. Arquitetura | Hexagonal: regra nova é código novo | Concluída | [F-03](docs/04-specs/f-03-arquitetura/spec.md) | [#3](https://github.com/jorgekamezawa/case-nota-fiscal/pull/3) |
 | 4. Observabilidade | Logs, métricas, traces e alertas | Concluída | [F-04](docs/04-specs/f-04-observabilidade/spec.md) | [#4](https://github.com/jorgekamezawa/case-nota-fiscal/pull/4) |
-| 5. Confiabilidade | Resposta sem esperar as integrações; nada perdido nem duplicado | Planejada | [RFC 6.2](docs/03-engenharia/rfc/0001-modernizacao-gerador-nota-fiscal.md#62-consistência-e-integrações), ADRs 0012 a 0014 | |
+| 5. Confiabilidade | Resposta sem esperar as integrações; nada perdido nem duplicado | Concluída | [E-02](docs/04-specs/e-02-resposta-sem-esperar/spec.md), [E-03](docs/04-specs/e-03-reenvio/spec.md), [E-04](docs/04-specs/e-04-guarda-das-notas/spec.md) | |
 | 6. Segurança | Só sistemas autorizados emitem nota | Planejada | ADRs 0005 e 0006 | |
 | 7. Entrega | Pipeline completo, Terraform e deploy canary na AWS | Planejada | ADRs 0008 e 0010 | |
 
@@ -29,10 +29,14 @@ As fases 1 a 4 estão concluídas e na `main`; as fases 5 a 7 estão planejadas 
 - Contrato de entrada e resposta de sucesso inalterados, garantidos por teste de contrato e por respostas de referência gravadas antes do upgrade.
 - Java 21, Spring Boot 4.1, arquitetura hexagonal conferida no build por ArchUnit.
 - Observabilidade com OpenTelemetry: log em JSON ligado ao trace, métricas de negócio, dashboard e alertas de SLO, sem dado pessoal na telemetria.
-- 213 testes, em ordem aleatória a cada execução, no CI de todo PR.
+- A nota é devolvida assim que guardada no DynamoDB, sem esperar registro, estoque, entrega e financeiro, que são acionados depois por outbox e filas, com nova tentativa, fila de erro, alerta e [runbook](docs/03-engenharia/runbooks/reprocessamento.md) para reprocessar só a etapa que falhou (D-05, D-07).
+- Nada se perde se a aplicação cair no meio do processamento, e o reenvio do mesmo pedido devolve a mesma nota sem acionar os sistemas de novo; conteúdo diferente com o mesmo `id_pedido` recebe 422 (D-08).
+- Notas guardadas por 5 anos e apagadas depois; banco fora do ar responde 503.
+- 305 testes, em ordem aleatória a cada execução, no CI de todo PR, com DynamoDB Local e ElasticMQ em container.
 
 **O que ainda falta**
-- **Fase 5:** a resposta ainda espera as quatro integrações (cerca de 1,3 s; cerca de 6,4 s com 6 linhas de item ou mais) e não há persistência: queda no meio do processamento e reenvio do mesmo pedido ainda não são tratados (D-05, D-07, D-08).
+- **Fase 5, validação na AWS:** o caminho do DynamoDB Streams aos EventBridge Pipes não tem emulador; localmente, o filtro do Pipe é conferido contra eventos reais do emulador, e o Pipe real é validado no ambiente de demonstração da fase 7.
+- **Fase 5, latência sob carga:** a resposta não espera mais as integrações (0,7 s com 6 linhas de item na primeira chamada após a subida, antes cerca de 6,4 s), mas o teste de carga do p95 abaixo de 800 ms não foi feito nesta fase.
 - **Fase 6:** a API não exige autenticação.
 - **Fase 7:** o CI roda build e testes, mas ainda não há quality gate, imagem, infraestrutura em código nem deploy.
 
@@ -41,13 +45,13 @@ As fases 1 a 4 estão concluídas e na `main`; as fases 5 a 7 estão planejadas 
 **Pré-requisitos:** Java 21 (pelo [sdkman](https://sdkman.io/): `sdk env install` usa a versão do `.sdkmanrc`) e Docker.
 
 ```bash
-# testes (213, em ordem aleatória)
+# testes (305, em ordem aleatória; sobem o DynamoDB Local e o ElasticMQ por Testcontainers)
 ./mvnw -B clean verify
 
-# Grafana local com coletor, Prometheus, Loki e Tempo: http://localhost:3000
+# Grafana local (http://localhost:3000), DynamoDB Local (porta 8000) e ElasticMQ, compatível com o SQS (porta 9324)
 docker compose up -d
 
-# aplicação com log em texto e telemetria enviada ao Grafana local
+# aplicação com log em texto, telemetria no Grafana local e tabelas e filas criadas na subida
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
 # um pedido de exemplo
@@ -59,8 +63,9 @@ curl -s -H 'Content-Type: application/json' \
 **Onde ver o resultado**
 - **Saúde:** http://localhost:8080/actuator/health/readiness.
 - **Dashboard:** no Grafana, "Gerador de nota fiscal": requisições, latência p95 e p99, notas emitidas, recusas por motivo e duração de cada integração.
-- **Do log ao trace:** em Explore, rode no Loki `{service_name="gerador-nota-fiscal"}` e clique no `trace_id` de uma linha para abrir no Tempo o caminho da requisição, com um trecho por integração.
-- **Alertas:** em Alerting, os 6 alertas de SLO. O de latência p95 dispara até a fase 5, como previsto.
+- **Do log ao trace:** em Explore, rode no Loki `{service_name="gerador-nota-fiscal"}` e clique no `trace_id` de uma linha para abrir no Tempo o caminho da requisição. Cada integração tem trace próprio, com o `id_pedido` no log.
+- **Integrações:** sem Pipe no ambiente local, a reconciliação leva as tarefas às filas em cerca de 10 segundos; o dashboard mostra tarefas por resultado, pendentes, a mais antiga e mensagens na fila de erro.
+- **Alertas:** em Alerting, os 6 alertas de SLO e os 4 das integrações. Para ver o alerta da fila de erro, rode a aplicação com `--simulacao.entrega-fora-do-ar=true`: em cerca de 1 minuto, a entrega falha 5 vezes e o alerta dispara.
 
 Para desligar: `docker compose down` (sem `-v`).
 

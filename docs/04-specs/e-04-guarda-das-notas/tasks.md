@@ -22,7 +22,7 @@ Spec: [spec.md](spec.md). Base `br.com.itau.geradornotafiscal` (abreviado `p`). 
 - **Classes:**
   - `p.application.exception.ArmazenamentoIndisponivelException` e `NotaGrandeDemaisException`: o adaptador traduz nelas as falhas do SDK e o tamanho da nota calculado antes da transação;
   - `p.adapter.in.web.handler.TratadorDeErros`: 503 `servico-indisponivel` e 400 `pedido-grande-demais` (sem campos);
-  - `p.domain.service.validacao.RegrasDoPedido` e `p.domain.exception.MotivoRegra`: máximo de 990 linhas, motivo por campo do `pedido-invalido` (etapa 2 da E01-RN-09);
-  - adaptador do banco com métrica de falhas por operação; alerta no Grafana (arquivo da T-08 do E-02).
+  - `p.domain.service.validacao.RegrasDoPedido` e `p.domain.exception.MotivoRegra`: máximo de 800 linhas, motivo por campo do `pedido-invalido` (etapa 2 da E01-RN-09);
+  - `p.adapter.out.dynamodb.ChamadasDynamoDb`: traduz as falhas do SDK e conta a métrica de falhas por operação; alerta no Grafana (arquivo da T-08 do E-02).
 - **Docs:** `docs/api/erros.md` com os `type` novos.
-- **Testes:** exemplos 4 a 6; emulador parado responde 503 sem detalhe interno; nota acima do limite de tamanho responde 400; medição do tamanho de 990 linhas com os textos no tamanho do leiaute da NF-e, com a saída no PR (E04-NF-06); se couber, o levantamento volta a "Respondido pelo PO".
+- **Testes:** exemplos 4 a 6; emulador parado responde 503 sem detalhe interno; nota acima do limite de tamanho responde 400; medição com os textos no tamanho do leiaute da NF-e, com a saída no PR: 800 linhas cabem no pior caso e 990 não (E04-NF-06).

@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) |
 | **Fase** | 5 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Regras de negócio** | [Levantamento](../../01-levantamento/levantamento-regras-negocio.md) |
 | **Decisão** | [ADR-0013](../../03-engenharia/adr/0013-acionamento-por-outbox-com-streams-e-sqs.md), [ADR-0002](../../03-engenharia/adr/0002-virtual-threads-para-esperas-de-io.md), [Spike-0001](../../03-engenharia/spikes/0001-persistencia-e-acionamento-das-integracoes.md) |
 
@@ -55,7 +55,9 @@ Como sistema de origem, quero a nota assim que ela for guardada, sem esperar os 
 | AWS SDK for Java 2.x, módulo SQS | Consumo e publicação nas filas (E02-NF-03, 05, 06) | Aplicação |
 | Event Ruler (biblioteca da AWS que aplica os padrões de filtro do EventBridge) | Conferir o filtro do Pipe (E02-NF-03) | Só testes |
 | Imagem `softwaremill/elasticmq-native` | Filas compatíveis com o SQS (E02-NF-03) | Testes e local |
-| Imagem `grafana/k6` | Carga local (E02-NF-01) | Só local |
+
+### Lacunas aceitas
+- E02-NF-01 e a verificação de pinning do E02-NF-07: o teste de carga não foi feito nesta fase, por decisão do time. Evidência parcial: a requisição não aciona nenhum sistema (6 linhas de item em 0,7 s na primeira chamada após a subida, antes cerca de 6,4 s) e não há `synchronized` no código.
 
 ### Fora da fase 5
 Pipes, filas, DLQs e alarme de falha de execução do Pipe na AWS (depende de métrica do CloudWatch): fase 7 (Terraform).
