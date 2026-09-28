@@ -4,7 +4,7 @@
 |---|---|
 | **Épico** | [Nota fiscal confiável](../../02-produto/epico-nota-fiscal-confiavel.md) (habilitador técnico) |
 | **Fase** | 2 |
-| **Status** | Em revisão |
+| **Status** | Concluída |
 | **Decisão** | [ADR-0001](../../03-engenharia/adr/0001-java-21-e-spring-boot-com-maior-suporte.md) |
 
 ## Objetivo
@@ -17,7 +17,7 @@ Não há parte funcional: a fase não cria nem altera regra de negócio. As regr
 |---|---|---|
 | F02-NF-01 | Java 21 e Spring Boot 4.1.x no build, no CI e no ambiente local. | ADR-0001; RFC R-03, O-05; D-15 |
 | F02-NF-02 | Mesmo comportamento: para os mesmos pedidos, as respostas de sucesso (200), recusa (400), corpo que não é JSON (400) e erro inesperado (500) são iguais às da versão anterior, campo a campo, com identificador e data da nota fixados. As respostas de referência são geradas na versão anterior, antes de qualquer troca de versão. | ADR-0001; RFC O-07 |
-| F02-NF-03 | Os testes da fase 1 continuam verdes com as mesmas asserções; só mudam imports e anotações que a troca de versão obriga. | RFC seção 7 |
+| F02-NF-03 | Os testes da fase 1 continuam verdes com as mesmas asserções; só mudam imports, anotações e chamadas de API renomeadas ou removidas pela troca de versão; nenhuma asserção muda. | RFC seção 7 |
 | F02-NF-04 | Migração em duas etapas, cada uma com suíte e CI verdes: primeiro Spring Boot 3.5 com Java 21; depois Spring Boot 4.1. | ADR-0001 (plano da migração) |
 | F02-NF-05 | Esperas simuladas das integrações inalteradas, inclusive a da entrega com 6 linhas de item ou mais. | RFC R-02 |
 | F02-NF-06 | Nenhuma dependência nova; só troca de versão das existentes, conforme a tabela de versões. Nenhuma biblioteca em modo de compatibilidade legado. | Decisão do time |

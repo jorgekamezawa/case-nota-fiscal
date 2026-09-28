@@ -1,9 +1,9 @@
 package br.com.itau.geradornotafiscal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
 
@@ -15,7 +15,7 @@ public final class PedidoBase {
     public static final String CPF = "887.403.470-95";
     public static final String CNPJ = "49.695.613/0001-80";
 
-    private static final JsonNodeFactory JSON = JsonNodeFactory.withExactBigDecimals(true);
+    private static final JsonNodeFactory JSON = JsonNodeFactory.instance;
 
     private PedidoBase() {
     }

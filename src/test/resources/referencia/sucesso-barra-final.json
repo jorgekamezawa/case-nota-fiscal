@@ -1,0 +1,38 @@
+{
+  "status" : 200,
+  "content_type" : "application/json",
+  "corpo" : {
+    "id_nota_fiscal" : "<uuid>",
+    "data" : "2026-01-15T12:30:45.123",
+    "valor_total_itens" : 100.00,
+    "valor_frete" : 10.48,
+    "itens" : [ {
+      "id_item" : "1",
+      "descricao" : "Teclado USB",
+      "valor_unitario" : 50.00,
+      "quantidade" : 2,
+      "valor_tributo_item" : 0.00
+    } ],
+    "destinatario" : {
+      "nome" : "John Doe",
+      "tipo_pessoa" : "FISICA",
+      "regime_tributacao" : null,
+      "documentos" : [ {
+        "numero" : "88740347095",
+        "tipo" : "CPF"
+      } ],
+      "enderecos" : [ {
+        "cep" : "03105003",
+        "logradouro" : "Av do estado",
+        "numero" : "5533",
+        "bairro" : "Mooca",
+        "cidade" : "São Paulo",
+        "estado" : "SP",
+        "pais" : "Brasil",
+        "complemento" : "4 anndar b",
+        "finalidade" : "ENTREGA",
+        "regiao" : "SUDESTE"
+      } ]
+    }
+  }
+}

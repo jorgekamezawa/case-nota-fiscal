@@ -1,15 +1,16 @@
 package br.com.itau.geradornotafiscal.web;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.JsonNodeFeature;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
@@ -39,13 +40,13 @@ class GeradorNFControllerContratoTest {
 
     private static final String ENDPOINT = "/api/pedido/gerarNotaFiscal";
 
-    private static final Predicate<JsonNode> TEXTO = JsonNode::isTextual;
+    private static final Predicate<JsonNode> TEXTO = JsonNode::isString;
     private static final Predicate<JsonNode> INTEIRO = JsonNode::isIntegralNumber;
     // Confere o texto do número, não só o valor: 100.00, nunca 100 nem 100.0.
     private static final Predicate<JsonNode> MONETARIO = no -> no.isBigDecimal() && no.decimalValue().scale() == 2;
     private static final Predicate<JsonNode> DATA_HORA =
-            no -> no.isTextual() && no.asText().matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?");
-    private static final Predicate<JsonNode> TEXTO_OU_NULO = no -> no.isTextual() || no.isNull();
+            no -> no.isString() && no.asString().matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?");
+    private static final Predicate<JsonNode> TEXTO_OU_NULO = no -> no.isString() || no.isNull();
 
     private static final Map<String, Predicate<JsonNode>> NOTA = Map.of(
             "id_nota_fiscal", TEXTO,
@@ -85,9 +86,10 @@ class GeradorNFControllerContratoTest {
             "cidade", TEXTO,
             "pais", TEXTO);
 
-    private static final ObjectMapper LEITOR_EXATO = new ObjectMapper()
+    private static final ObjectMapper LEITOR_EXATO = JsonMapper.builder()
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
-            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
+            .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
+            .build();
 
     @Autowired
     private MockMvc mockMvc;
@@ -114,7 +116,7 @@ class GeradorNFControllerContratoTest {
     }
 
     private static final Map<String, Predicate<JsonNode>> PROBLEMA = Map.of(
-            "type", no -> no.isTextual() && no.asText().startsWith("/erros/"),
+            "type", no -> no.isString() && no.asString().startsWith("/erros/"),
             "title", TEXTO,
             "status", INTEIRO,
             "detail", TEXTO,
@@ -122,7 +124,7 @@ class GeradorNFControllerContratoTest {
 
     private static final Map<String, Predicate<JsonNode>> CAMPO_INVALIDO = Map.of(
             "campo", TEXTO,
-            "type", no -> no.isTextual() && no.asText().startsWith("/erros/"),
+            "type", no -> no.isString() && no.asString().startsWith("/erros/"),
             "detail", TEXTO);
 
     @Test
@@ -155,7 +157,7 @@ class GeradorNFControllerContratoTest {
     private static void conferir(String caminho, JsonNode objeto, Map<String, Predicate<JsonNode>> campos,
                                  List<String> violacoes) {
         Set<String> recebidos = new TreeSet<>();
-        objeto.fieldNames().forEachRemaining(recebidos::add);
+        recebidos.addAll(objeto.propertyNames());
         if (!recebidos.equals(new TreeSet<>(campos.keySet()))) {
             violacoes.add(caminho + " campos " + recebidos + ", esperados " + new TreeSet<>(campos.keySet()));
         }

@@ -1,10 +1,10 @@
 package br.com.itau.geradornotafiscal.config;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,7 +13,7 @@ class JacksonConfigTest {
     @Test
     @DisplayName("E01-NF-06: decimal lido na árvore JSON como decimal exato, com as casas enviadas")
     void e01Nf06_decimalExatoComAsCasasEnviadas() throws Exception {
-        Jackson2ObjectMapperBuilder builder = Jackson2ObjectMapperBuilder.json();
+        JsonMapper.Builder builder = JsonMapper.builder();
         new JacksonConfig().decimaisExatos().customize(builder);
         ObjectMapper objectMapper = builder.build();
 

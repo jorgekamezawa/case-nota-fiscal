@@ -38,4 +38,4 @@ Spec: [spec.md](spec.md). Pacote base `br.com.itau.geradornotafiscal` (abreviado
 ## QA
 
 ### T-06. Rastreabilidade
-Um agente de contexto limpo confere se cada F02-NF tem evidência. Também confere se o diff dos testes da fase 1 traz só imports e anotações (F02-NF-03) e se nenhuma linha com `Thread.sleep` mudou (F02-NF-05). Pronto quando não há lacuna, ou quando cada lacuna tem justificativa aceita.
+Um agente de contexto limpo confere se cada F02-NF tem evidência. Também confere se o diff dos testes da fase 1 traz só imports, anotações e chamadas de API renomeadas ou removidas, sem mudar asserção (F02-NF-03) e se nenhuma linha com `Thread.sleep` mudou (F02-NF-05). Pronto quando não há lacuna, ou quando cada lacuna tem justificativa aceita.

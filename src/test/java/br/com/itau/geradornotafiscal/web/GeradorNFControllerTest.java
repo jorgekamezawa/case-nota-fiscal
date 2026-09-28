@@ -5,7 +5,7 @@ import br.com.itau.geradornotafiscal.service.impl.EntregaService;
 import br.com.itau.geradornotafiscal.service.impl.EstoqueService;
 import br.com.itau.geradornotafiscal.service.impl.FinanceiroService;
 import br.com.itau.geradornotafiscal.service.impl.RegistroService;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,9 +13,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,13 +52,13 @@ class GeradorNFControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private EstoqueService estoqueService;
-    @MockBean
+    @MockitoBean
     private RegistroService registroService;
-    @MockBean
+    @MockitoBean
     private EntregaService entregaService;
-    @MockBean
+    @MockitoBean
     private FinanceiroService financeiroService;
 
     @Test
@@ -150,6 +151,25 @@ class GeradorNFControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type").value("/erros/json-invalido"))
                 .andExpect(jsonPath("$.campos").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("F02-NF-02 (exceção aceita): método não permitido responde 405 em Problem Details")
+    void f02Nf02_metodoNaoPermitidoEmProblemDetails() throws Exception {
+        mockMvc.perform(get(ENDPOINT))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(405));
+    }
+
+    @Test
+    @DisplayName("F02-NF-02 (exceção aceita): tipo de conteúdo não suportado responde 415 em Problem Details")
+    void f02Nf02_tipoDeConteudoNaoSuportadoEmProblemDetails() throws Exception {
+        mockMvc.perform(post(ENDPOINT).contentType(MediaType.TEXT_PLAIN).content(PedidoBase.novo().toString()))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(415));
+        verifyNoInteractions(estoqueService, registroService, entregaService, financeiroService);
     }
 
     @Test

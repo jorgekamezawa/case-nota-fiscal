@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.6.2</version>
+		<version>4.1.1</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>br.com.itau</groupId>
@@ -13,7 +13,7 @@
 	<name>calculadoratributos</name>
 	<description>Aplicacao para calculo de tributos</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>21</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -30,12 +30,12 @@
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -57,6 +57,8 @@
 				<configuration>
 					<!-- Ordem aleatória a cada execução prova que a suíte não depende da ordem (E01-NF-07). -->
 					<runOrder>random</runOrder>
+					<!-- O Mockito carrega um agente em tempo de execução e anexa classes ao classpath de inicialização: a primeira flag autoriza o agente sem aviso; a segunda desliga o compartilhamento de classes (CDS), que a JVM avisaria estar incompatível. -->
+					<argLine>-XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
 				</configuration>
 			</plugin>
 		</plugins>

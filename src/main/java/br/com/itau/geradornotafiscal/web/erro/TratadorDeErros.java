@@ -4,6 +4,7 @@ import br.com.itau.geradornotafiscal.service.validacao.PedidoInvalidoException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -36,7 +37,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException e, HttpHeaders headers,
-                                                                  HttpStatus status, WebRequest request) {
+                                                                  HttpStatusCode status, WebRequest request) {
         return problema(HttpStatus.BAD_REQUEST, "json-invalido", "Corpo inválido",
                 "O corpo da requisição não é um pedido em JSON válido.", List.of());
     }

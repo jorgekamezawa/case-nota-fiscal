@@ -1,7 +1,7 @@
 # Back
 
 ## Build e testes
-- `./mvnw verify` precisa passar antes de qualquer entrega. Java 11 até a fase 2 (depois Java 21).
+- `./mvnw clean verify` precisa passar antes de qualquer entrega. Java 21 e Spring Boot 4.1 (Jackson 3).
 
 ## Código
 - Classes na estrutura atual de pacotes até a fase 3 ([ADR-0003](../docs/03-engenharia/adr/0003-arquitetura-hexagonal-enxuta.md)).

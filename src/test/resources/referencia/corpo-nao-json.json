@@ -1,0 +1,10 @@
+{
+  "status" : 400,
+  "content_type" : "application/problem+json",
+  "corpo" : {
+    "type" : "/erros/json-invalido",
+    "title" : "Corpo inválido",
+    "status" : 400,
+    "detail" : "O corpo da requisição não é um pedido em JSON válido."
+  }
+}

@@ -5,9 +5,8 @@ import br.com.itau.geradornotafiscal.model.NotaFiscal;
 import br.com.itau.geradornotafiscal.model.Pedido;
 import br.com.itau.geradornotafiscal.service.GeradorNotaFiscalService;
 import br.com.itau.geradornotafiscal.service.validacao.ValidadorPedido;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +26,7 @@ public class GeradorNFController {
 
 	// Recebe o corpo como árvore JSON para listar todos os erros de formato de uma vez, antes da conversão.
 	@PostMapping("/gerarNotaFiscal")
-	public ResponseEntity<NotaFiscal> gerarNotaFiscal(@RequestBody ObjectNode corpo) throws JsonProcessingException {
+	public ResponseEntity<NotaFiscal> gerarNotaFiscal(@RequestBody ObjectNode corpo) {
 		validadorPedido.validar(corpo);
 		Pedido pedido = objectMapper.treeToValue(corpo, Pedido.class);
 		NotaFiscal notaFiscal = notaFiscalService.gerarNotaFiscal(pedido);
