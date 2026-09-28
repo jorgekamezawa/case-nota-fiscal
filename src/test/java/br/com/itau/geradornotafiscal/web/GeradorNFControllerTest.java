@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -150,6 +151,25 @@ class GeradorNFControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.type").value("/erros/json-invalido"))
                 .andExpect(jsonPath("$.campos").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("F02-NF-02 (exceção aceita): método não permitido responde 405 em Problem Details")
+    void f02Nf02_metodoNaoPermitidoEmProblemDetails() throws Exception {
+        mockMvc.perform(get(ENDPOINT))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(405));
+    }
+
+    @Test
+    @DisplayName("F02-NF-02 (exceção aceita): tipo de conteúdo não suportado responde 415 em Problem Details")
+    void f02Nf02_tipoDeConteudoNaoSuportadoEmProblemDetails() throws Exception {
+        mockMvc.perform(post(ENDPOINT).contentType(MediaType.TEXT_PLAIN).content(PedidoBase.novo().toString()))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(415));
+        verifyNoInteractions(estoqueService, registroService, entregaService, financeiroService);
     }
 
     @Test
