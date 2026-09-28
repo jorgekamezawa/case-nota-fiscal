@@ -28,11 +28,11 @@ As notas e as tarefas ficam no DynamoDB ([ADR-0012](0012-persistencia-em-dynamod
   - o sistema é acionado em segundos, porque o Streams empurra cada tarefa, sem consulta periódica no caminho normal.
 - **Custos:**
   - mais peças para operar: Streams, um Pipe, uma fila e uma DLQ por sistema;
-  - o Pipe não tem emulador local gratuito: localmente, o teste parte da fila, e o Pipe é validado no ambiente AWS;
+  - o Pipe não tem emulador local gratuito: localmente, o teste parte da fila, o filtro é conferido contra eventos do emulador, e o Pipe é validado no ambiente AWS;
   - a entrega é "pelo menos uma vez": todo processamento precisa tolerar a mesma mensagem mais de uma vez;
   - o consumo das filas roda no mesmo serviço da API e disputa os mesmos recursos ([ADR-0004](0004-computacao-em-ecs-fargate.md)).
 - **Passa a ser obrigatório:**
-  - filtro dos Pipes só para inserções, para que mudança de status não gere mensagem nova;
+  - filtro dos Pipes só para a criação da tarefa (registro sem versão anterior, porque o filtro não aceita o tipo de evento), para que mudança de status não gere mensagem nova;
   - execução única de cada tarefa por gravação condicional, e a mensagem só é apagada quando a tarefa termina;
   - a tarefa vai para a DLQ pelo próprio serviço ao marcar FALHOU, porque o SQS conta recebimentos, não falhas;
   - identificador da nota como chave de idempotência em toda chamada externa (T-03 da RFC);

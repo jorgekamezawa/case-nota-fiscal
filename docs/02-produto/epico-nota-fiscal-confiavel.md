@@ -18,7 +18,7 @@ Quem pede uma nota recebe uma nota correta, só com os dados do próprio pedido 
 - Um reenvio duplica a nota, a baixa de estoque e a cobrança.
 
 ## 3. Como o épico é aceito
-- Toda nota segue as decisões Q-01 a Q-13 do levantamento.
+- Toda nota segue as decisões Q-01 a Q-16 do levantamento.
 - Pedido inválido é recusado com todos os motivos da etapa de validação em que parou; nunca vira nota nem erro interno.
 - Quem pede a nota não espera registro, estoque, entrega e financeiro.
 - Nenhum acionamento se perde ou se duplica; falha persistente chega à operação e ao dono do sistema no mesmo dia.
@@ -30,8 +30,8 @@ Cada entregável tem uma spec em `docs/04-specs`. A parte funcional é escrita q
 |---|---|---|---|---|
 | E-01 | Nota correta ou recusa clara | Pedido incompleto ou incoerente é recusado com os motivos agrupados por etapa de validação, sem expor dado pessoal; pedido válido gera nota com tributo, frete e totais certos, com 2 casas, só com os itens do próprio pedido | RN-01 a RN-06, Q-01 a Q-08; demanda: itens acumulados entre execuções | 1 |
 | E-02 | Resposta sem esperar os sistemas acionados | A nota é devolvida assim que gravada; os quatro sistemas são acionados depois, com nova tentativa sem duplicar, alerta no mesmo dia e reprocessamento só da etapa que falhou, sem emitir outra nota | RN-07, Q-10, Q-11 | 5 |
-| E-03 | Reenvio devolve a mesma nota | Reenvio não duplica nota nem acionamentos; conteúdo diferente com o mesmo pedido é recusado | Q-09, Q-12 | 5 |
-| E-04 | Guarda das notas por 5 anos | Notas guardadas pelo prazo fiscal e apagadas depois | Q-13 | 5 |
+| E-03 | Reenvio devolve a mesma nota | Reenvio não duplica nota nem acionamentos; conteúdo diferente com o mesmo pedido é recusado | Q-09, Q-12, Q-14, Q-15 | 5 |
+| E-04 | Guarda das notas por 5 anos | Notas guardadas pelo prazo fiscal e apagadas depois | Q-13, Q-16 | 5 |
 | E-05 | Só sistemas autorizados emitem nota | Emissão restrita a quem tem credencial, sem derrubar os consumidores atuais | Demanda: autenticação e autorização | 6 |
 
 **Habilitadores técnicos** (sem regra de negócio; spec escrita pelo time):

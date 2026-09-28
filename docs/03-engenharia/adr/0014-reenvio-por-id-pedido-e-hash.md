@@ -25,12 +25,12 @@ O contrato de entrada não pode mudar (R-01). As notas ficam no DynamoDB ([ADR-0
   - contrato de entrada inalterado;
   - 64 caracteres por nota, sem dado pessoal a mais.
 - **Custos:**
-  - qualquer diferença no corpo, mesmo num campo que não afeta o cálculo, faz o reenvio ser recusado;
+  - qualquer diferença num campo que o contrato conhece, mesmo que não afete o cálculo, faz o reenvio ser recusado;
   - depois do expurgo de 5 anos, o mesmo `id_pedido` geraria nota nova (aceito pela Q-12);
   - mudar a regra de normalização torna diferentes os hashes das notas já gravadas;
-  - biblioteca nova para a normalização.
+  - normalização própria, porque a RFC 8785 escreve números em ponto flutuante e perderia precisão.
 - **Passa a ser obrigatório:**
-  - hash calculado sobre o corpo recebido, normalizado pela RFC 8785 (JSON Canonicalization Scheme: campos ordenados pelo código dos caracteres, números em formato único);
+  - hash calculado sobre os campos do corpo que o contrato conhece, sem os nulos (Q-14 do levantamento), normalizado pela RFC 8785 (JSON Canonicalization Scheme: campos ordenados pelo código dos caracteres, sem espaços), exceto os números, escritos pelo valor decimal exato, sem zeros à direita: a RFC os converte em ponto flutuante, e valores com mais de cerca de 15 dígitos significativos colidiriam;
   - conflito de transação em envios simultâneos tratado com nova tentativa curta, antes de ler a nota existente;
   - recusa com 422 e corpo no formato do [ADR-0009](0009-erros-no-formato-problem-details.md);
   - leitura fortemente consistente (sempre o dado mais recente) ao buscar a nota existente;

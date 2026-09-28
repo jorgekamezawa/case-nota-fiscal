@@ -7,6 +7,7 @@
 - Arquitetura hexagonal do [ADR-0003](../docs/03-engenharia/adr/0003-arquitetura-hexagonal-enxuta.md), com subpacotes por tipo em cada camada (ex.: `adapter.in.web.dto.request`, `dto.response`, `mappers`; `domain.entity`, `domain.valueobject`, `domain.service.<assunto>`). O `ArquiteturaTest` confere as regras no build.
 - Domínio sem framework, exceto `@Component` e Lombok. Entidade não é record: construtor privado e métodos de fábrica que aplicam as regras dela; value object pode ser record.
 - Caso de uso: interface `XxxUseCase` em `application.port.in` (comando em `command`) e implementação `XxxUseCaseImpl` em `application.usecase`. A web só fala com a porta de entrada.
+- Exceções de regra de negócio em `domain.exception`; as da aplicação (porta de saída indisponível, divergência no reenvio) em `application.exception`.
 - Colaboradores injetados por construtor com `@RequiredArgsConstructor` e campos `final`; nunca criados com `new`.
 - Bean sem estado mutável: nada de dado de requisição em campo, principalmente `static`.
 - Valor monetário sempre decimal exato; arredondamento só pela classe `Arredondamento` (NBR 5891).

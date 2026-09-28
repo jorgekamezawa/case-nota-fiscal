@@ -4,7 +4,7 @@ Serviço que recebe um pedido, calcula tributo e frete, emite a nota fiscal e ac
 
 ## Documentos
 - `docs/00-demanda`: escopo e restrições.
-- `docs/01-levantamento`: regras vigentes e decisões do PO (Q-01 a Q-13).
+- `docs/01-levantamento`: regras vigentes e decisões do PO (Q-01 a Q-16).
 - `docs/02-produto`: épico e entregáveis.
 - `docs/03-engenharia`: RFC, ADRs, spikes e diagramas.
 - `docs/04-specs/<entregável>/`: `spec.md` (parte funcional do PO e não funcional do time) e `tasks.md`.

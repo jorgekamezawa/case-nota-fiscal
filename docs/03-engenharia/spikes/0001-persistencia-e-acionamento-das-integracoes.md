@@ -89,7 +89,7 @@ sequenceDiagram
     S->>T: marca CONCLUIDA
 ```
 
-- **Transporte:** o Streams publica cada alteração da tabela; um Pipe por sistema filtra só as inserções (`eventName = INSERT`) daquele sistema e as coloca na fila dele. Sem o filtro de inserção, cada mudança de status viraria uma mensagem nova, em laço. Filas separadas impedem que a entrega lenta atrase os outros.
+- **Transporte:** o Streams publica cada alteração da tabela; um Pipe por sistema filtra só a criação das tarefas daquele sistema (registro com `sistema` do Pipe e sem versão anterior, porque o filtro dos Pipes não aceita o tipo de evento) e as coloca na fila dele. Sem esse filtro, cada mudança de status viraria uma mensagem nova, em laço. Filas separadas impedem que a entrega lenta atrase os outros.
 - **Execução única:** o processo pega a tarefa com uma gravação condicional, "EM_EXECUCAO, só se hoje for PENDENTE, ou EM_EXECUCAO com `bloqueada_ate` vencido". O DynamoDB confere a condição e grava num único passo, uma alteração por vez no mesmo item: se duas tarefas do ECS recebem a mesma mensagem, só a primeira passa. A outra não apaga a mensagem enquanto a tarefa estiver EM_EXECUCAO, porque a cópia repetida é a mesma mensagem, e apagá-la tiraria a nova tentativa de quem está executando; ela só apaga se a tarefa já estiver CONCLUIDA ou FALHOU. O `bloqueada_ate` (agora + 60 s) libera a tarefa se quem a pegou cair no meio.
 - **Reenvio:** a gravação condicional em `notas` falha, o serviço lê a nota (ou a recebe na própria recusa, com `ReturnValuesOnConditionCheckFailure`) e compara o `hash_pedido`. Em envios simultâneos, a recusa pode vir como conflito de transação (`TransactionConflict`); nesse caso, uma nova tentativa curta leva ao mesmo caminho. Conteúdo igual devolve a mesma nota sem criar tarefas; diferente é recusado. Dois envios simultâneos também caem aqui, porque só um grava.
 - **Nova tentativa:** a tarefa volta a PENDENTE com `tentativas` + 1, e a mensagem, que não foi apagada, reaparece quando vence a visibilidade da fila (2 minutos). Na 5ª falha, cerca de 10 minutos depois, o serviço marca a tarefa como FALHOU e move a mensagem para a fila de erro (DLQ), e o alarme avisa a operação no mesmo dia. O serviço faz esse movimento porque o SQS conta recebimentos, não falhas; o limite de recebimentos da fila (10) fica só como rede de segurança.
@@ -118,7 +118,7 @@ sequenceDiagram
 - **Normalização do hash:** a RFC 8785 pede uma biblioteca nova, a aprovar na spec.
 - **O índice é atualizado com pequeno atraso:** não afeta a reconciliação, que olha tarefas paradas há minutos.
 - **Transação custa o dobro de capacidade** de uma gravação simples.
-- **Ambiente local:** DynamoDB Local (emulador oficial da AWS) e ElasticMQ (compatível com SQS) rodam em container, sem cadastro. O Pipe não tem emulador gratuito: o LocalStack passou a exigir conta e token em 2026. Localmente, o processamento é testado a partir da fila, que a reconciliação alimenta pelo mesmo caminho; o Pipe é validado no ambiente AWS de demonstração (fase 7).
+- **Ambiente local:** DynamoDB Local (emulador oficial da AWS) e ElasticMQ (compatível com SQS) rodam em container, sem cadastro. O Pipe não tem emulador gratuito: o LocalStack passou a exigir conta e token em 2026. Localmente, o processamento é testado a partir da fila, que a reconciliação alimenta pelo mesmo caminho, e o filtro do Pipe é conferido nos testes contra eventos do Streams do emulador; o Pipe é validado no ambiente AWS de demonstração (fase 7).
 
 ## Decorrência
 - ADR-0012 (banco) e ADR-0013 (acionamento das integrações).

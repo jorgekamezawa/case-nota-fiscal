@@ -116,7 +116,7 @@ Pedido base: PF, CPF `887.403.470-95`, `data` 2022-05-01, 1 item de 50,00 × 2, 
 | 25 | Nenhuma (conferir data) | `data` da nota = momento da geração, não 2022-05-01 | E01-RN-17 |
 | 26 | Endereço com `bairro` Mooca, `cidade` São Paulo e `pais` Brasil | Nota devolve os três campos com os mesmos valores | E01-RN-17 |
 | 27 | Documento enviado como `887.403.470-95` | Nota devolve `887.403.470-95` | E01-RN-17 |
-| 28 | Mesmo pedido enviado duas vezes seguidas | Duas notas, com identificadores diferentes, cada uma com 1 item | E01-RN-17, E01-RN-18 |
+| 28 | Mesmo pedido enviado duas vezes seguidas | Substituído pelo [E-03](../e-03-reenvio/spec.md) (exemplo 1): o reenvio devolve a mesma nota | E03-RN-02 |
 | 29 | Pedido de 1 item e pedido de 3 itens, o segundo enviado antes de a resposta do primeiro chegar | Nota com 1 item e nota com 3 itens, cada uma com os próprios itens | E01-RN-18 |
 | 30 | PJ Lucro Real, 1 item de 999,99 × 1 | Alíquota 3%; tributo 30,00 | E01-RN-12, E01-RN-16 |
 | 31 | PJ Lucro Presumido, 1 item de 999,99 × 1 | Alíquota 3%; tributo 30,00 | E01-RN-12, E01-RN-16 |
@@ -125,7 +125,7 @@ Pedido base: PF, CPF `887.403.470-95`, `data` 2022-05-01, 1 item de 50,00 × 2, 
 | 34 | PJ Simples Nacional, 1 item de 11,51 × 1 | Alíquota 3%; tributo 0,35 (0,3453: 5 seguido de algarismo diferente de zero, sobe) | E01-RN-16 |
 
 ### Fora deste entregável
-- Reenvio devolver a mesma nota: E-03 (até lá, cada envio gera nota nova, como no exemplo de cálculo 28). A validação do `id_pedido` também entra no E-03.
+- Reenvio devolver a mesma nota: E-03 (até lá, cada envio gera nota nova, como no exemplo de cálculo 28). A validação do `id_pedido` também entra no E-03 (E03-RN-01).
 - Campos que o levantamento não exige (`id_pedido`, `data`, `nome`, `id_item`, `descricao` e os campos do endereço além de finalidade e região) não são validados nesta fase, exceto pela E01-RN-08.
 - Fuso horário da data: tratado na parte técnica, sem mudar a regra.
 

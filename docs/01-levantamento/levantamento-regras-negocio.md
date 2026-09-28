@@ -4,7 +4,7 @@
 |---|---|
 | **Autor** | Jorge Kamezawa (engenharia) |
 | **Revisor** | PO |
-| **Status** | Respondido pelo PO |
+| **Status** | Respondido pelo PO, com validações pendentes |
 | **Demanda** | [demanda.md](../00-demanda/demanda.md) |
 
 ## 1. Objetivo
@@ -256,6 +256,46 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
   - **Justificativa:** guardar a menos descumpre obrigação fiscal; a LGPD permite reter dado pessoal para cumprir obrigação legal.
   - **Validado com:** Fiscal; Jurídico; DPO.
 
+**Q-14. Quando dois envios com o mesmo `id_pedido` têm o mesmo conteúdo?** (depende da Q-09)
+- **Decide:** PO
+- **Hoje:** não se aplica, porque todo envio gera nota nova. A Q-09 decidiu que conteúdo diferente é recusado, sem definir o que é diferente.
+- **Casos:** (1) campos em outra ordem; (2) número escrito de outra forma, ex.: `730` e `730.00`; (3) campo nulo num envio e ausente no outro; (4) campo que o contrato não conhece presente só num envio; (5) documento com e sem pontuação; (6) texto com diferença só de espaços ou maiúsculas.
+- **Opções:** (a) qualquer diferença no texto enviado recusa; (b) casos 1 a 4 são o mesmo pedido; 5 e 6 são diferentes, porque mudam o que a nota devolve; (c) como (b), e também 5 e 6 iguais.
+- **Recomendação do time:** (b). O que o serviço ignora (campo nulo ou desconhecido) não diferencia pedidos, e nada que mudaria a nota devolvida é tratado como igual.
+- **Resposta do PO:** Opção (b) com ajuste.
+  - Dois envios são iguais quando todo campo que o contrato conhece tem o mesmo valor. Diferença só de forma (casos 1 a 4) não conta.
+  - Texto é comparado como recebido: documento com e sem pontuação e diferença de espaços ou maiúsculas são pedidos diferentes (casos 5 e 6).
+  - A ordem das listas (itens, documentos, endereços) conta como conteúdo: a nota mantém a ordem, e o endereço de entrega é o primeiro da lista (Q-06).
+  - Campo que não aparece na nota também conta: `data` do pedido diferente é outro pedido.
+  - A recusa por divergência não repete dado do pedido original nem da nota e se distingue da recusa por validação, para a origem saber que já existe nota para aquele `id_pedido`.
+  - **Justificativa:** o reenvio legítimo (falha de rede) repete o mesmo texto, então recusar os casos 5 e 6 quase não tem custo; tratar como igual o que muda a nota devolveria ao consumidor uma nota diferente do que ele enviou, sem ele perceber.
+
+**Q-15. O que responder ao reenvio de um pedido que hoje seria recusado pela validação?** (depende da Q-09 e da Q-12)
+- **Decide:** PO
+- **Hoje:** não se aplica. Em 5 anos de reenvio (Q-12), uma regra de validação pode mudar, e um reenvio pode chegar com conteúdo inválido.
+- **Opções:** (a) validar primeiro: pedido inválido recebe a recusa de validação, mesmo com nota existente; (b) procurar a nota primeiro: conteúdo igual devolve a nota e diferente é recusado como divergente, sem validar.
+- **Recomendação do time:** (a). O consumidor recebe o motivo mais útil para corrigir o pedido. Custo: reenvio legítimo pode ser recusado após mudança de regra.
+- **Resposta do PO:** Opção (b) com ajuste.
+  - Antes de procurar a nota, confere só se o `id_pedido` veio preenchido e no formato certo.
+  - Se já existe nota: conteúdo igual (Q-14) devolve a nota; conteúdo diferente é recusado como divergente, sem validar o restante.
+  - Se não existe nota: validação completa pelas regras vigentes, inclusive quando o primeiro envio falhou antes de a nota ser gravada (Q-09).
+  - **Justificativa:** com (a), após mudança de regra, o reenvio legítimo recebe recusa embora a nota exista e estoque e financeiro já tenham sido acionados; a origem entende venda recusada com cobrança feita. E corrigir o pedido e reenviar cairia de todo modo na recusa por divergência.
+  - **Premissa:** devolver nota já emitida não é nova emissão; nota emitida com erro por regra antiga segue a correção pelo Fiscal, não o reenvio.
+
+**Q-16. O que fazer com um pedido grande demais para ser guardado?** (depende da Q-13)
+- **Decide:** PO, com Fiscal e donos dos sistemas de origem
+- **Hoje:** o serviço não guarda nada e aceita qualquer quantidade de linhas de item. O armazenamento tem limite de tamanho por nota; a estimativa, ainda não medida, é de cerca de 2.500 linhas, conforme o tamanho dos textos.
+- **Opções:** (a) recusar, com motivo claro, o pedido acima de um máximo fixo de linhas, abaixo do limite técnico com margem; (b) recusar só quando o pedido não couber, pelo tamanho; (c) dividir o pedido em várias notas.
+- **Recomendação do time:** (a), com o máximo definido pelo maior pedido real das origens e pela medição da engenharia. Um número fixo é previsível; (b) aceitaria ou recusaria conforme o tamanho dos textos; (c) muda o que é uma nota.
+- **Resposta do PO:** Opção (a) com ajuste.
+  - Pedido com mais de 990 linhas de item é recusado, com motivo claro e sem repetir dado pessoal (Q-07).
+  - 990 é o limite de itens por nota do leiaute oficial da NF-e; o maior pedido real das origens tem 200 linhas, então nenhuma venda real é recusada.
+  - O máximo vale se a medição do limite técnico, com textos no tamanho máximo do contrato, comportar 990 linhas. Se não comportar, o caso volta ao PO antes de fixar outro número.
+  - Mesmo abaixo do máximo, pedido que não couber no armazenamento é recusado com motivo claro, nunca com erro interno. Nenhuma nota é devolvida sem estar guardada (Q-10, Q-13).
+  - **Justificativa:** número fixo é previsível para as origens; recusar pelo tamanho dos textos (b) é difícil de explicar e corrigir; dividir em várias notas (c) muda o que é uma nota, sem evidência de que ocorra.
+  - **Validado com:** Fiscal (Manual de Orientação do Contribuinte, Anexo I, campo nItem de 1 a 990); donos dos sistemas de origem (maior pedido real: 200 linhas).
+  - **Validar com:** engenharia (medição do limite técnico com textos no tamanho máximo, na implementação).
+
 **Próxima fase (fora deste levantamento):** campos do endereço descartados na resposta e data da nota sem fuso horário.
 
 ## 5. Resumo das decisões
@@ -275,6 +315,9 @@ Cada pergunta traz quem decide, a situação atual, as opções, a recomendaçã
 | Q-11 Falha após emissão | Nova tentativa sem duplicar; alerta no mesmo dia; nota mantida | Origens não recebem erro por falha de outro sistema |
 | Q-12 Janela do reenvio | Enquanto a nota estiver guardada (5 anos) | Origens não podem reutilizar `id_pedido` |
 | Q-13 Guarda | Este serviço, 5 anos | Nenhum |
+| Q-14 Mesmo conteúdo | Mesmo valor em todo campo conhecido; forma não conta; texto e ordem das listas contam | Origens: reenvio com texto ou ordem diferente passa a ser recusado como divergente |
+| Q-15 Reenvio inválido pelas regras vigentes | Procurar a nota antes de validar; igual devolve, diferente recusa como divergente | Origens: reenvio legítimo recebe a nota mesmo após mudança de regra; recusa por divergência é motivo novo de recusa |
+| Q-16 Pedido grande demais | Recusar acima de 990 linhas de item, se a medição técnica comportar | Origens: pedido acima de 990 linhas, hoje aceito, passa a ser recusado; maior pedido real tem 200 |
 
 **Encaminhamentos fora das perguntas:**
 - **Itens de um pedido aparecendo em outro (D-01/D-03):** o DPO avalia se houve incidente a comunicar (LGPD). A correção é o conserto do defeito.
