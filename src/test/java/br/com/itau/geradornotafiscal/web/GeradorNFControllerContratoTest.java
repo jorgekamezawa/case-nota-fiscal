@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +27,11 @@ import java.util.function.Predicate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Contrato da API (E01-NF-01, E01-NF-02). Só pode mudar para ficar mais rígido.
+ * Contrato da API (E01-NF-01, E01-NF-02, E01-NF-03). Só pode mudar para ficar mais rígido.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -109,6 +111,37 @@ class GeradorNFControllerContratoTest {
         conferirLista("destinatario.documentos", destinatario.path("documentos"), DOCUMENTO, violacoes);
         conferirLista("destinatario.enderecos", destinatario.path("enderecos"), ENDERECO, violacoes);
         assertEquals(List.of(), violacoes, resposta);
+    }
+
+    private static final Map<String, Predicate<JsonNode>> PROBLEMA = Map.of(
+            "type", no -> no.isTextual() && no.asText().startsWith("/erros/"),
+            "title", TEXTO,
+            "status", INTEIRO,
+            "detail", TEXTO,
+            "campos", JsonNode::isArray);
+
+    private static final Map<String, Predicate<JsonNode>> CAMPO_INVALIDO = Map.of(
+            "campo", TEXTO,
+            "type", no -> no.isTextual() && no.asText().startsWith("/erros/"),
+            "detail", TEXTO);
+
+    @Test
+    @DisplayName("E01-NF-03: recusa responde 400 em Problem Details com a lista de campos")
+    void e01Nf03_contratoDeRecusa() throws Exception {
+        String pedido = StreamUtils.copyToString(new ClassPathResource("paylods/teste-pf.json").getInputStream(), StandardCharsets.UTF_8)
+                .replace("\"valor_frete\": 10.0", "\"valor_frete\": -5.0");
+
+        String resposta = mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(pedido))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        List<String> violacoes = new ArrayList<>();
+        JsonNode problema = LEITOR_EXATO.readTree(resposta);
+        conferir("", problema, PROBLEMA, violacoes);
+        conferirLista("campos", problema.path("campos"), CAMPO_INVALIDO, violacoes);
+        assertEquals(List.of(), violacoes, resposta);
+        assertEquals(400, problema.get("status").intValue());
     }
 
     private static void conferirLista(String caminho, JsonNode lista, Map<String, Predicate<JsonNode>> campos,

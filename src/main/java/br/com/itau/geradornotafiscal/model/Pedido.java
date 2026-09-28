@@ -16,7 +16,7 @@ import lombok.*;
 @NoArgsConstructor
 public class Pedido {
 	 @JsonProperty("id_pedido")
-	    private int idPedido;
+	    private Long idPedido;
 
 	    @JsonProperty("data")
 	    private LocalDate data;
