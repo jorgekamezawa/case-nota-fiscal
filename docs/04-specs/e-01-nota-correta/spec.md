@@ -81,7 +81,7 @@ Vale para pedidos aceitos pela validação.
 | E01-RN-14 | Tributo do item = valor unitário × quantidade × alíquota, arredondado a 2 casas (E01-RN-16). | Q-03, Q-08 |
 | E01-RN-15 | Frete da nota = `valor_frete` do pedido acrescido do percentual da região do endereço de entrega (E01-RN-06), arredondado a 2 casas (E01-RN-16): Norte 8%; Nordeste 8,5%; Centro-Oeste 7%; Sudeste 4,8%; Sul 6%. | RN-04, RN-05, Q-06, Q-08 |
 | E01-RN-16 | Arredondamento pela ABNT NBR 5891, olhando o algarismo depois da 2ª casa: menor que 5, a 2ª casa fica; maior que 5, ou 5 seguido de algum algarismo diferente de zero, a 2ª casa sobe; 5 sem nada diferente de zero depois, a 2ª casa sobe se for ímpar e fica se for par. | Q-08 |
-| E01-RN-17 | A nota traz: identificador novo a cada emissão; data e hora do momento em que a nota é gerada, não a `data` do pedido; `valor_total_itens` igual ao do pedido; `valor_frete` da E01-RN-15; os itens do pedido, na mesma ordem, cada um com `id_item`, `descricao`, `valor_unitario` e `quantidade` como recebidos e o tributo da E01-RN-14; e o destinatário como recebido, com todos os campos enviados, inclusive `bairro`, `cidade` e `pais` dos endereços, que hoje se perdem e passam a voltar sem retirar nenhum campo atual da resposta (o documento não passa pela limpeza da E01-RN-02). A nota não tem campo de total geral (itens + frete + tributos); cada valor monetário tem no máximo 2 casas decimais, e assim qualquer soma fecha em centavos. | RN-06, Q-08; ordem, destinatário completo, documento e total geral: definido nesta spec |
+| E01-RN-17 | A nota traz: identificador novo a cada emissão; data e hora do momento em que a nota é gerada, não a `data` do pedido; `valor_total_itens` igual ao do pedido; `valor_frete` da E01-RN-15; os itens do pedido, na mesma ordem, cada um com `id_item`, `descricao`, `valor_unitario` e `quantidade` com os valores recebidos e o tributo da E01-RN-14; e o destinatário como recebido, com todos os campos enviados, inclusive `bairro`, `cidade` e `pais` dos endereços, que hoje se perdem e passam a voltar sem retirar nenhum campo atual da resposta (o documento não passa pela limpeza da E01-RN-02). A nota não tem campo de total geral (itens + frete + tributos); cada valor monetário tem no máximo 2 casas decimais, e assim qualquer soma fecha em centavos. | RN-06, Q-08; ordem, destinatário completo, documento e total geral: definido nesta spec |
 | E01-RN-18 | Cada nota traz exatamente os itens do próprio pedido, com a mesma quantidade de linhas, sem influência de pedidos processados antes nem de pedidos enviados antes de a resposta deste chegar. | Demanda (problemas funcionais) |
 
 #### Exemplos de cálculo
@@ -130,4 +130,14 @@ Pedido base: PF, CPF `887.403.470-95`, `data` 2022-05-01, 1 item de 50,00 × 2, 
 - Fuso horário da data: tratado na parte técnica, sem mudar a regra.
 
 ## Parte não funcional
-A preencher pelo time.
+Só o específico deste entregável; o transversal está nos `CLAUDE.md`.
+
+| ID | Requisito | Origem |
+|---|---|---|
+| E01-NF-01 | Entrada idêntica à atual: `POST /api/pedido/gerarNotaFiscal`, mesmos campos, nomes em `snake_case` e tipos. | Demanda (contrato da API); RFC R-01 |
+| E01-NF-02 | Sucesso responde 200 com os mesmos campos de hoje, acrescidos de `bairro`, `cidade` e `pais` nos endereços (E01-RN-17). Valores monetários com 2 casas fixas (`100.00`). `data` no formato atual (data e hora, sem fuso), no horário de `America/Sao_Paulo`. | RFC R-04, O-07; D-16; D-17 |
+| E01-NF-03 | Recusa responde 400 no formato Problem Details ([ADR-0009](../../03-engenharia/adr/0009-erros-no-formato-problem-details.md)), com a lista de campos inválidos, cada um com o caminho (ex.: `itens[0].quantidade`) e um `type` estável por motivo; os `type` ficam documentados. Corpo que não é JSON válido também responde 400. Erro inesperado responde 500 sem stack trace nem mensagem interna. | ADR-0009; RFC O-07 |
+| E01-NF-04 | Com 150 chamadas simultâneas de pedidos diferentes, cada resposta traz só os próprios itens, sem perda (E01-RN-18). | RFC O-01; D-01, D-03 |
+| E01-NF-05 | Dez chamadas seguidas do mesmo pedido de 1 item mantêm o tempo da primeira (hoje sobe de 1,5 s para 6,5 s a partir da 6ª). As esperas simuladas das integrações continuam iguais, inclusive a da entrega com 6 linhas de item ou mais. | D-02; RFC R-02 |
+| E01-NF-06 | Valores monetários exatos, sem ponto flutuante. | D-12 |
+| E01-NF-07 | Suíte independente da ordem de execução; o CI roda build e testes em todo PR e em todo push na `main`. | D-06; RFC seção 7, fase 1 |
