@@ -1,0 +1,10 @@
+{
+  "status" : 500,
+  "content_type" : "application/problem+json",
+  "corpo" : {
+    "type" : "/erros/erro-interno",
+    "title" : "Erro interno",
+    "status" : 500,
+    "detail" : "Erro inesperado ao processar o pedido."
+  }
+}

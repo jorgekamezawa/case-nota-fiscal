@@ -1,0 +1,19 @@
+{
+  "status" : 400,
+  "content_type" : "application/problem+json",
+  "corpo" : {
+    "type" : "/erros/pedido-invalido",
+    "title" : "Pedido inválido",
+    "status" : 400,
+    "detail" : "O pedido tem 2 campo(s) inválido(s).",
+    "campos" : [ {
+      "campo" : "valor_frete",
+      "type" : "/erros/frete-negativo",
+      "detail" : "Valor do frete não pode ser negativo."
+    }, {
+      "campo" : "itens[0].quantidade",
+      "type" : "/erros/quantidade-invalida",
+      "detail" : "Quantidade deve ser inteira e maior que zero."
+    } ]
+  }
+}
