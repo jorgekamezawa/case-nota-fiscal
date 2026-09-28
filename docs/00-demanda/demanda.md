@@ -1,12 +1,12 @@
-# Desafio Técnico — Nota Fiscal
+# Demanda: gerador de nota fiscal
 
 ## Contexto
 
 A aplicação responsável pelo processamento de notas fiscais apresenta atualmente uma série de desafios técnicos, funcionais e de manutenção.
 
-O objetivo deste desafio é analisar o cenário existente, identificar as causas dos problemas e propor uma evolução da solução considerando não apenas a correção dos problemas atuais, mas também qualidade de código, arquitetura, performance, observabilidade, testes e todo o ciclo de desenvolvimento e entrega de software.
+O objetivo desta demanda é analisar o cenário existente, identificar as causas dos problemas e propor uma evolução da solução considerando não apenas a correção dos problemas atuais, mas também qualidade de código, arquitetura, performance, observabilidade, testes e todo o ciclo de desenvolvimento e entrega de software.
 
-O candidato tem liberdade para aplicar quaisquer boas práticas, padrões ou melhorias que considerar pertinentes. Espera-se uma visão que vá além da simples correção dos problemas apresentados.
+O time tem liberdade para aplicar quaisquer boas práticas, padrões ou melhorias que considerar pertinentes. Espera-se uma visão que vá além da simples correção dos problemas apresentados.
 
 ---
 
@@ -34,11 +34,11 @@ O candidato tem liberdade para aplicar quaisquer boas práticas, padrões ou mel
 
 * Pedidos contendo mais de **6 itens** apresentam aumento significativo no tempo de processamento.
 * Após sucessivas execuções da aplicação, o tempo de resposta tende a aumentar consideravelmente.
-* Algumas integrações externas possuem latência propositalmente simulada para representar chamadas reais e esse comportamento faz parte do cenário do desafio.
+* Algumas integrações externas possuem latência propositalmente simulada para representar chamadas reais e esse comportamento faz parte do cenário.
 
 ---
 
-# Objetivo do desafio
+# Objetivo da demanda
 
 A solução proposta deve:
 
@@ -49,7 +49,7 @@ A solução proposta deve:
 * Melhorar a experiência de desenvolvimento e manutenção da aplicação.
 * Demonstrar boas práticas de engenharia de software durante todo o ciclo de desenvolvimento e entrega.
 
-O candidato é livre para realizar quaisquer melhorias adicionais que considerar relevantes. A capacidade de identificar problemas não explicitamente descritos e propor soluções adequadas também será considerada na avaliação.
+O time é livre para realizar quaisquer melhorias adicionais que considerar relevantes. Identificar problemas não explicitamente descritos e propor soluções adequadas também faz parte da demanda.
 
 ---
 
@@ -74,7 +74,7 @@ A aplicação deverá ser atualizada para:
 * **Java 21**
 * versão estável mais recente do **Spring / Spring Boot** compatível com a solução proposta.
 
-Sempre que fizer sentido, o candidato poderá utilizar recursos disponíveis nas versões mais recentes do Java e do ecossistema Spring.
+Sempre que fizer sentido, o time poderá utilizar recursos disponíveis nas versões mais recentes do Java e do ecossistema Spring.
 
 A utilização dessas funcionalidades deve ser justificada pelo benefício proporcionado à solução, evitando seu uso apenas por serem recursos novos.
 
@@ -105,7 +105,7 @@ Não é necessário implementar toda a infraestrutura apresentada no desenho, ma
 
 # Engenharia e ciclo de entrega
 
-A avaliação não estará restrita apenas ao código produzido.
+A entrega não se restringe ao código produzido.
 
 Uma entrega de alta qualidade deve considerar o **ciclo completo de desenvolvimento e entrega de software**, incluindo aspectos como:
 
@@ -126,6 +126,6 @@ Uma entrega de alta qualidade deve considerar o **ciclo completo de desenvolvime
 * configuração por ambiente;
 * monitoramento da aplicação em produção.
 
-A profundidade aplicada em cada aspecto fica a critério do candidato.
+A profundidade aplicada em cada aspecto fica a critério do time.
 
-O principal objetivo é demonstrar **como você pensa, investiga problemas, toma decisões técnicas e estrutura uma solução sustentável para produção**.
+O principal objetivo é **uma solução sustentável para produção, com a investigação dos problemas e as decisões técnicas registradas**.
