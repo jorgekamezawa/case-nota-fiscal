@@ -1,4 +1,4 @@
-package br.com.itau.geradornotafiscal.application.port.in;
+package br.com.itau.geradornotafiscal.application.port.in.result;
 
 /**
  * O que aconteceu com a tarefa ao processar a mensagem; define o que fazer com ela (E02-NF-04, E02-NF-05).

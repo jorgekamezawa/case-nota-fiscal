@@ -29,7 +29,7 @@ public class ReconciliacaoAgendada {
 
     @Scheduled(fixedDelayString = "${reconciliacao.intervalo:PT5M}", initialDelayString = "${reconciliacao.intervalo:PT5M}")
     public void reconciliar() {
-        int recolocadas = reconciliarTarefasUseCase.reconciliar(abertasHaMaisDe);
+        int recolocadas = reconciliarTarefasUseCase.executar(abertasHaMaisDe);
         if (recolocadas > 0) {
             log.atInfo().addKeyValue("recolocadas", recolocadas).log("Reconciliação recolocou tarefas na fila");
         }

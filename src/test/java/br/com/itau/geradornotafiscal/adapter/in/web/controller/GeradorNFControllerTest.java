@@ -153,7 +153,7 @@ class GeradorNFControllerTest {
                 .andExpect(jsonPath("$.campos.length()").value(1))
                 .andExpect(jsonPath("$.campos[0].campo").value("destinatario"))
                 .andExpect(jsonPath("$.campos[0].type").value("/erros/campo-obrigatorio"));
-        verify(gerarNotaFiscalUseCase, never()).gerarNotaFiscal(any());
+        verify(gerarNotaFiscalUseCase, never()).executar(any());
         verifyNoInteractions(estoquePort, registroPort, entregaPort, financeiroPort);
     }
 
@@ -169,7 +169,7 @@ class GeradorNFControllerTest {
                 .andExpect(jsonPath("$.type").value("/erros/pedido-invalido"))
                 .andExpect(jsonPath("$.campos.length()").value(1))
                 .andExpect(jsonPath("$.campos[0].type").value("/erros/formato-invalido"));
-        verify(gerarNotaFiscalUseCase, never()).gerarNotaFiscal(any());
+        verify(gerarNotaFiscalUseCase, never()).executar(any());
     }
 
     @Test
@@ -178,7 +178,7 @@ class GeradorNFControllerTest {
         enviar(PedidoBase.novo())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.destinatario.documentos[0].numero").value(PedidoBase.CPF));
-        verify(gerarNotaFiscalUseCase).gerarNotaFiscal(any());
+        verify(gerarNotaFiscalUseCase).executar(any());
     }
 
     @Test

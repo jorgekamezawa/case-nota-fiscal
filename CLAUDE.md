@@ -18,7 +18,7 @@ Serviço que recebe um pedido, calcula tributo e frete, emite a nota fiscal e ac
 - Java pelo sdkman (`.sdkmanrc`).
 
 ## Ambiente local
-- `docker compose up -d` sobe o Grafana local (`otel-lgtm`) em http://localhost:3000, com o dashboard e os alertas de `observabilidade/grafana`, o DynamoDB Local (porta 8000) e o ElasticMQ, compatível com o SQS (porta 9324, painel em http://localhost:9325).
+- `docker compose up -d` sobe o Grafana local (`otel-lgtm`) em http://localhost:3000, com o dashboard e os alertas de `observabilidade/grafana`, o DynamoDB Local (porta 8000) e o ElasticMQ, compatível com o SQS (porta 9324, sem painel web).
 - `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` roda a aplicação com log em texto, envio da telemetria ao Grafana local e tabelas e filas criadas na subida. Sem Pipe no local, a reconciliação leva as tarefas às filas em cerca de 10 segundos.
 - `simulacao.entrega-fora-do-ar=true` no perfil local derruba a entrega, para ver o alerta da DLQ.
 - Os testes sobem os próprios emuladores por Testcontainers; só precisam do Docker.

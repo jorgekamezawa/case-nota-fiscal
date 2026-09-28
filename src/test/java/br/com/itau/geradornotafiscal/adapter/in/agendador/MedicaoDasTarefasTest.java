@@ -1,7 +1,7 @@
 package br.com.itau.geradornotafiscal.adapter.in.agendador;
 
 import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase.SituacaoDoSistema;
+import br.com.itau.geradornotafiscal.application.port.in.result.SituacaoDoSistema;
 import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

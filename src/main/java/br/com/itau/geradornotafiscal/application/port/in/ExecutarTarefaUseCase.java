@@ -1,5 +1,6 @@
 package br.com.itau.geradornotafiscal.application.port.in;
 
+import br.com.itau.geradornotafiscal.application.port.in.result.TarefaExecutada;
 import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 
 /**

@@ -13,5 +13,5 @@ public interface ReenvioUseCase {
      * Nota já emitida para o mesmo conteúdo, ou vazio se o pedido não tem nota. Lança
      * {@code PedidoDivergenteException} se a nota existe e o conteúdo é outro.
      */
-    Optional<NotaFiscal> notaDoReenvio(Long idPedido, String hashPedido);
+    Optional<NotaFiscal> executar(Long idPedido, String hashPedido);
 }

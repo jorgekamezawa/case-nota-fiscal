@@ -32,7 +32,7 @@ As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas 
 - A nota é devolvida assim que guardada no DynamoDB, sem esperar registro, estoque, entrega e financeiro, que são acionados depois por outbox e filas, com nova tentativa, fila de erro, alerta e [runbook](docs/03-engenharia/runbooks/reprocessamento.md) para reprocessar só a etapa que falhou (D-05, D-07).
 - Nada se perde se a aplicação cair no meio do processamento, e o reenvio do mesmo pedido devolve a mesma nota sem acionar os sistemas de novo; conteúdo diferente com o mesmo `id_pedido` recebe 422 (D-08).
 - Notas guardadas por 5 anos e apagadas depois; banco fora do ar responde 503.
-- 301 testes, em ordem aleatória a cada execução, no CI de todo PR, com DynamoDB Local e ElasticMQ em container.
+- 305 testes, em ordem aleatória a cada execução, no CI de todo PR, com DynamoDB Local e ElasticMQ em container.
 
 **O que ainda falta**
 - **Fase 5, validação na AWS:** o caminho do DynamoDB Streams aos EventBridge Pipes não tem emulador; localmente, o filtro do Pipe é conferido contra eventos reais do emulador, e o Pipe real é validado no ambiente de demonstração da fase 7.
@@ -45,10 +45,10 @@ As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas 
 **Pré-requisitos:** Java 21 (pelo [sdkman](https://sdkman.io/): `sdk env install` usa a versão do `.sdkmanrc`) e Docker.
 
 ```bash
-# testes (301, em ordem aleatória; sobem o DynamoDB Local e o ElasticMQ por Testcontainers)
+# testes (305, em ordem aleatória; sobem o DynamoDB Local e o ElasticMQ por Testcontainers)
 ./mvnw -B clean verify
 
-# Grafana local (http://localhost:3000), DynamoDB Local e ElasticMQ (painel das filas em http://localhost:9325)
+# Grafana local (http://localhost:3000), DynamoDB Local (porta 8000) e ElasticMQ, compatível com o SQS (porta 9324)
 docker compose up -d
 
 # aplicação com log em texto, telemetria no Grafana local e tabelas e filas criadas na subida

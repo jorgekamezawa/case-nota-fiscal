@@ -19,7 +19,7 @@ Spec: [spec.md](spec.md). Base `br.com.itau.geradornotafiscal` (abreviado `p`). 
 - **Classes:**
   - `p.adapter.in.fila.ConsumidorDeTarefas`: uma leitura contínua por fila, em virtual threads, ligada por propriedade (desligada nos testes que não consomem filas, para contextos do Spring em cache não disputarem as mensagens); apaga, mantém ou move a mensagem para a DLQ conforme o resultado;
   - `p.adapter.in.fila.dto.MensagemTarefa`: `id_pedido` (chega como texto, como o Pipe o extrai do evento) e sistema, ignorando campo desconhecido;
-  - `p.application.port.in.ExecutarTarefaUseCase` e `p.application.usecase.ExecutarTarefaUseCaseImpl`: pega a tarefa, lê a nota, chama a porta do sistema e devolve `TarefaExecutada`, com o `ResultadoTarefa` (concluída, já terminada, nova tentativa, em execução por outro ou falhou), que define se a mensagem é apagada, mantida ou movida para a DLQ;
+  - `p.application.port.in.ExecutarTarefaUseCase` e `p.application.usecase.ExecutarTarefaUseCaseImpl`: pega a tarefa, lê a nota, chama a porta do sistema e devolve `p.application.port.in.result.TarefaExecutada`, com o `ResultadoTarefa` (concluída, já terminada, nova tentativa, em execução por outro ou falhou), que define se a mensagem é apagada, mantida ou movida para a DLQ;
   - `p.adapter.in.fila.ProcessadorDeTarefa`: trace, log e métricas de uma tarefa, usado pelo consumo e pelos testes de telemetria;
   - `p.config.FilasDeTarefas`: nome e endereço da fila e da DLQ de cada sistema;
   - `p.application.port.out.TarefaIntegracaoPort` e `p.adapter.out.dynamodb.TarefaIntegracaoDynamoAdapter`: gravações condicionais da tarefa;

@@ -1,6 +1,7 @@
 package br.com.itau.geradornotafiscal.application.port.in;
 
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoDaEmissao;
 
 /**
  * Gera a nota de um pedido que já passou no preenchimento e no formato (etapa 1 da E01-RN-09).
@@ -9,5 +10,5 @@ import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscal
  */
 public interface GerarNotaFiscalUseCase {
 
-    ResultadoDaEmissao gerarNotaFiscal(GerarNotaFiscalCommand comando);
+    ResultadoDaEmissao executar(GerarNotaFiscalCommand comando);
 }

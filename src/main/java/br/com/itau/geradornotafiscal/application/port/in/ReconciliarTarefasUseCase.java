@@ -8,5 +8,5 @@ import java.time.Duration;
 public interface ReconciliarTarefasUseCase {
 
     /** Quantidade de tarefas recolocadas na fila. */
-    int reconciliar(Duration abertasHaMaisDe);
+    int executar(Duration abertasHaMaisDe);
 }

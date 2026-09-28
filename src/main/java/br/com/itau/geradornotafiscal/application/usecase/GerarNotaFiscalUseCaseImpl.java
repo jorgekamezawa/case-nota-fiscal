@@ -4,8 +4,7 @@ import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndispon
 import br.com.itau.geradornotafiscal.application.exception.ConflitoDeGravacaoException;
 import br.com.itau.geradornotafiscal.application.exception.NotaJaGuardadaException;
 import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ReenvioUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ResultadoDaEmissao;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoDaEmissao;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.application.port.out.NotaFiscalPersistenciaPort;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
@@ -13,6 +12,7 @@ import br.com.itau.geradornotafiscal.domain.entity.Pedido;
 import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
 import br.com.itau.geradornotafiscal.domain.service.frete.CalculadoraFrete;
 import br.com.itau.geradornotafiscal.domain.service.guarda.PrazoDeGuarda;
+import br.com.itau.geradornotafiscal.domain.service.reenvio.RegraDoReenvio;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.CalculadoraTributo;
 import br.com.itau.geradornotafiscal.domain.service.tributacao.Tributacao;
 import br.com.itau.geradornotafiscal.domain.valueobject.Destinatario;
@@ -42,12 +42,12 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
     private final Clock relogio;
     private final PrazoDeGuarda prazoDeGuarda;
     private final NotaFiscalPersistenciaPort notaFiscalPersistenciaPort;
-    private final ReenvioUseCase reenvioUseCase;
+    private final RegraDoReenvio regraDoReenvio;
 
     @Override
-    public ResultadoDaEmissao gerarNotaFiscal(GerarNotaFiscalCommand comando) {
+    public ResultadoDaEmissao executar(GerarNotaFiscalCommand comando) {
         // Com nota já emitida, vale o reenvio, sem conferir o restante do pedido (E03-RN-01, Q-15).
-        Optional<NotaFiscal> jaEmitida = reenvioUseCase.notaDoReenvio(comando.idPedido(), comando.hashPedido());
+        Optional<NotaFiscal> jaEmitida = notaJaEmitida(comando);
         if (jaEmitida.isPresent()) {
             return new ResultadoDaEmissao(jaEmitida.get(), true);
         }
@@ -82,7 +82,7 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
 
     private NotaFiscal notaDoOutroEnvio(GerarNotaFiscalCommand comando, RuntimeException conflito) {
         for (int tentativa = 1; tentativa <= TENTATIVAS_APOS_CONFLITO; tentativa++) {
-            Optional<NotaFiscal> nota = reenvioUseCase.notaDoReenvio(comando.idPedido(), comando.hashPedido());
+            Optional<NotaFiscal> nota = notaJaEmitida(comando);
             if (nota.isPresent()) {
                 return nota.get();
             }
@@ -90,6 +90,13 @@ public class GerarNotaFiscalUseCaseImpl implements GerarNotaFiscalUseCase {
         }
         // A outra gravação não terminou: o consumidor pode reenviar (E04-NF-02).
         throw new ArmazenamentoIndisponivelException(conflito);
+    }
+
+    private Optional<NotaFiscal> notaJaEmitida(GerarNotaFiscalCommand comando) {
+        return notaFiscalPersistenciaPort.buscar(comando.idPedido()).map(guardada -> {
+            regraDoReenvio.conferir(comando.idPedido(), guardada.hashPedido(), comando.hashPedido());
+            return guardada.nota();
+        });
     }
 
     private static void esperar(long milissegundos) {

@@ -1,6 +1,6 @@
 package br.com.itau.geradornotafiscal.application.usecase;
 
-import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase.SituacaoDoSistema;
+import br.com.itau.geradornotafiscal.application.port.in.result.SituacaoDoSistema;
 import br.com.itau.geradornotafiscal.application.port.out.FilaTarefasPort;
 import br.com.itau.geradornotafiscal.application.port.out.TarefaIntegracaoPort;
 import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
@@ -41,7 +41,7 @@ class ConsultarSituacaoDasTarefasUseCaseImplTest {
         when(filaTarefasPort.mensagensNaDlq(any())).thenAnswer(chamada -> chamada.getArgument(0) == Sistema.ENTREGA ? 2 : 0);
 
         List<SituacaoDoSistema> situacao = new ConsultarSituacaoDasTarefasUseCaseImpl(Clock.fixed(AGORA, ZoneOffset.UTC),
-                tarefaIntegracaoPort, filaTarefasPort).consultar();
+                tarefaIntegracaoPort, filaTarefasPort).executar();
 
         assertEquals(List.of(
                 new SituacaoDoSistema(Sistema.REGISTRO, 0, Duration.ZERO, 0),

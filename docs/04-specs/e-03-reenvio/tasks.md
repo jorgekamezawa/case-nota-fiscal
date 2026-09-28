@@ -14,10 +14,11 @@ Spec: [spec.md](spec.md). Base `br.com.itau.geradornotafiscal` (abreviado `p`). 
 ### T-04. Reenvio
 - **Cobre:** E03-RN-01 a E03-RN-03, E03-RN-05, E03-RN-06, E03-NF-01, E03-NF-03, E03-NF-04.
 - **Classes:**
-  - `p.application.port.in.ReenvioUseCase` e `p.application.usecase.ReenvioUseCaseImpl`: procura a nota pelo `id_pedido` e compara o hash; devolve a nota, nada (segue a emissão) ou lança `PedidoDivergenteException`;
-  - `p.application.exception.PedidoDivergenteException`, `NotaJaGuardadaException` e `ConflitoDeGravacaoException`;
-  - `p.application.port.in.ResultadoDaEmissao`: a nota e se ela foi emitida ou devolvida;
-  - `p.adapter.in.web.controller.GeradorNFController`: consulta o `ReenvioUseCase` antes de emitir; conta `notas.emitidas` só para nota emitida; `id_pedido` obrigatório no `PedidoRequest`;
+  - `p.domain.service.reenvio.RegraDoReenvio` e `p.domain.exception.PedidoDivergenteException`: mesmo hash vale a nota emitida; outro hash é divergência (E03-RN-02, E03-RN-03);
+  - `p.application.port.in.ReenvioUseCase` e `p.application.usecase.ReenvioUseCaseImpl`: procura a nota pelo `id_pedido` e aplica a `RegraDoReenvio`; devolve a nota ou nada (segue a emissão);
+  - `p.application.exception.NotaJaGuardadaException` e `ConflitoDeGravacaoException`;
+  - `p.application.port.in.result.ResultadoDaEmissao`: a nota e se ela foi emitida ou devolvida;
+  - `p.adapter.in.web.controller.GeradorNFController`: o `GerarNotaFiscalUseCase` procura a nota e aplica a `RegraDoReenvio` antes de emitir; conta `notas.emitidas` só para nota emitida; `id_pedido` obrigatório no `PedidoRequest`;
   - `p.application.port.in.command.GerarNotaFiscalCommand`: ganha o hash do pedido;
   - `p.adapter.in.web.handler.TratadorDeErros`: na recusa da etapa 1 com `id_pedido` legível, consulta o `ReenvioUseCase` antes de responder, e falha do armazenamento nessa consulta responde 503 ali mesmo; 422 `pedido-divergente`; métrica e log (E03-NF-04);
   - `p.application.usecase.GerarNotaFiscalUseCaseImpl`: em conflito na gravação condicional, nova tentativa curta e o mesmo caminho do reenvio; devolve se a nota foi emitida ou devolvida;

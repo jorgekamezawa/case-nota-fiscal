@@ -1,4 +1,4 @@
-package br.com.itau.geradornotafiscal.application.port.in;
+package br.com.itau.geradornotafiscal.application.port.in.result;
 
 import java.time.Instant;
 

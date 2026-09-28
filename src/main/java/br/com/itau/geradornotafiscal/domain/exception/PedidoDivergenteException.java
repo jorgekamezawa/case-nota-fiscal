@@ -1,4 +1,4 @@
-package br.com.itau.geradornotafiscal.application.exception;
+package br.com.itau.geradornotafiscal.domain.exception;
 
 /**
  * Já existe nota para o {@code id_pedido} com outro conteúdo (E03-RN-03).

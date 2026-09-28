@@ -8,7 +8,7 @@ import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacaoEntrada;
 import br.com.itau.geradornotafiscal.adapter.in.web.validacao.ViolacoesDeEntrada;
 import br.com.itau.geradornotafiscal.application.exception.ArmazenamentoIndisponivelException;
 import br.com.itau.geradornotafiscal.application.exception.NotaGrandeDemaisException;
-import br.com.itau.geradornotafiscal.application.exception.PedidoDivergenteException;
+import br.com.itau.geradornotafiscal.domain.exception.PedidoDivergenteException;
 import br.com.itau.geradornotafiscal.application.port.in.ReenvioUseCase;
 import br.com.itau.geradornotafiscal.domain.exception.PedidoInvalidoException;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -103,7 +103,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
             return Optional.empty();
         }
         try {
-            return reenvioUseCase.notaDoReenvio(recebido.idPedido(), recebido.hashPedido()).map(nota -> {
+            return reenvioUseCase.executar(recebido.idPedido(), recebido.hashPedido()).map(nota -> {
                 log.atInfo().addKeyValue("id_pedido", recebido.idPedido()).addKeyValue("id_nota_fiscal", nota.getIdNotaFiscal())
                         .log("Reenvio devolvido");
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(notaFiscalMapper.paraResponse(nota));

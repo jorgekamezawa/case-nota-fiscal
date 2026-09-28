@@ -1,7 +1,7 @@
 package br.com.itau.geradornotafiscal.adapter.in.agendador;
 
 import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase.SituacaoDoSistema;
+import br.com.itau.geradornotafiscal.application.port.in.result.SituacaoDoSistema;
 import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -39,7 +39,7 @@ public class MedicaoDasTarefas {
 
     @Scheduled(fixedDelayString = "${medicao.intervalo:PT1M}", initialDelayString = "${medicao.intervalo:PT1M}")
     public void medir() {
-        for (SituacaoDoSistema situacao : consultarSituacaoDasTarefasUseCase.consultar()) {
+        for (SituacaoDoSistema situacao : consultarSituacaoDasTarefasUseCase.executar()) {
             pendentes.get(situacao.sistema()).set(situacao.pendentes());
             idadeEmSegundos.get(situacao.sistema()).set(situacao.maisAntiga().toSeconds());
             naDlq.get(situacao.sistema()).set(situacao.mensagensNaDlq());

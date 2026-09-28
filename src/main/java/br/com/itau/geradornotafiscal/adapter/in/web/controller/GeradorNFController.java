@@ -7,7 +7,7 @@ import br.com.itau.geradornotafiscal.adapter.in.web.mappers.PedidoMapper;
 import br.com.itau.geradornotafiscal.adapter.in.web.reenvio.LeitorDoCorpo;
 import br.com.itau.geradornotafiscal.adapter.in.web.reenvio.PedidoRecebido;
 import br.com.itau.geradornotafiscal.application.port.in.GerarNotaFiscalUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ResultadoDaEmissao;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoDaEmissao;
 import br.com.itau.geradornotafiscal.application.port.in.command.GerarNotaFiscalCommand;
 import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,7 +38,7 @@ public class GeradorNFController {
 	public ResponseEntity<NotaFiscalResponse> gerarNotaFiscal(@Valid @RequestBody PedidoRequest pedido,
 															  @RequestAttribute(LeitorDoCorpo.ATRIBUTO) PedidoRecebido recebido) {
 		GerarNotaFiscalCommand comando = pedidoMapper.paraComando(pedido, recebido.hashPedido());
-		ResultadoDaEmissao resultado = gerarNotaFiscalUseCase.gerarNotaFiscal(comando);
+		ResultadoDaEmissao resultado = gerarNotaFiscalUseCase.executar(comando);
 		NotaFiscal notaFiscal = resultado.nota();
 		// Reenvio não é nota nova: não conta em notas.emitidas e tem log próprio (E03-NF-04).
 		if (resultado.reenvio()) {

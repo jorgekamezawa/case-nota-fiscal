@@ -1,8 +1,8 @@
 package br.com.itau.geradornotafiscal.application.usecase;
 
 import br.com.itau.geradornotafiscal.application.port.in.ExecutarTarefaUseCase;
-import br.com.itau.geradornotafiscal.application.port.in.ResultadoTarefa;
-import br.com.itau.geradornotafiscal.application.port.in.TarefaExecutada;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoTarefa;
+import br.com.itau.geradornotafiscal.application.port.in.result.TarefaExecutada;
 import br.com.itau.geradornotafiscal.application.port.out.EntregaPort;
 import br.com.itau.geradornotafiscal.application.port.out.EstoquePort;
 import br.com.itau.geradornotafiscal.application.port.out.FinanceiroPort;

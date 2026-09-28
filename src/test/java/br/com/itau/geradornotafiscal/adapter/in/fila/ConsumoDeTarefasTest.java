@@ -168,7 +168,7 @@ class ConsumoDeTarefasTest {
         long idPedido = emitir();
         pipe.eventosNovos();
 
-        assertThat(reconciliarTarefasUseCase.reconciliar(Duration.ZERO)).isGreaterThanOrEqualTo(4);
+        assertThat(reconciliarTarefasUseCase.executar(Duration.ZERO)).isGreaterThanOrEqualTo(4);
 
         aguardarTodas(idPedido, StatusTarefa.CONCLUIDA);
     }

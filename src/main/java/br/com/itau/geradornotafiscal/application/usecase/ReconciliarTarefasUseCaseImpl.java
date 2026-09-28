@@ -24,7 +24,7 @@ public class ReconciliarTarefasUseCaseImpl implements ReconciliarTarefasUseCase 
     private final FilaTarefasPort filaTarefasPort;
 
     @Override
-    public int reconciliar(Duration abertasHaMaisDe) {
+    public int executar(Duration abertasHaMaisDe) {
         List<TarefaIntegracao> paradas = tarefaIntegracaoPort.abertasDesdeAntesDe(relogio.instant().minus(abertasHaMaisDe));
         paradas.forEach(tarefa -> filaTarefasPort.publicar(tarefa.getIdPedido(), tarefa.getSistema()));
         return paradas.size();

@@ -1,6 +1,7 @@
 package br.com.itau.geradornotafiscal.application.usecase;
 
 import br.com.itau.geradornotafiscal.application.port.in.ConsultarSituacaoDasTarefasUseCase;
+import br.com.itau.geradornotafiscal.application.port.in.result.SituacaoDoSistema;
 import br.com.itau.geradornotafiscal.application.port.out.FilaTarefasPort;
 import br.com.itau.geradornotafiscal.application.port.out.TarefaIntegracaoPort;
 import br.com.itau.geradornotafiscal.domain.entity.TarefaIntegracao;
@@ -23,7 +24,7 @@ public class ConsultarSituacaoDasTarefasUseCaseImpl implements ConsultarSituacao
     private final FilaTarefasPort filaTarefasPort;
 
     @Override
-    public List<SituacaoDoSistema> consultar() {
+    public List<SituacaoDoSistema> executar() {
         Instant agora = relogio.instant();
         List<TarefaIntegracao> abertas = tarefaIntegracaoPort.abertasDesdeAntesDe(agora);
         return Arrays.stream(Sistema.values()).map(sistema -> {

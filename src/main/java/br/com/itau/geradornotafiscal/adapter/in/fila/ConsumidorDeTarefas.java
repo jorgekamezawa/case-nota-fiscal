@@ -1,7 +1,7 @@
 package br.com.itau.geradornotafiscal.adapter.in.fila;
 
 import br.com.itau.geradornotafiscal.adapter.in.fila.dto.MensagemTarefa;
-import br.com.itau.geradornotafiscal.application.port.in.ResultadoTarefa;
+import br.com.itau.geradornotafiscal.application.port.in.result.ResultadoTarefa;
 import br.com.itau.geradornotafiscal.config.FilasDeTarefas;
 import br.com.itau.geradornotafiscal.domain.valueobject.Sistema;
 import lombok.extern.slf4j.Slf4j;
