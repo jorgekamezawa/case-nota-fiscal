@@ -146,8 +146,73 @@ class ValidadorPedidoTest {
                 }, "destinatario.tipo_pessoa:valor-nao-aceito"));
     }
 
+    /** Partes das regras sem exemplo na spec, apontadas pela revisão de rastreabilidade (T-10). */
+    static Stream<Arguments> regrasSemExemplo() {
+        return Stream.of(
+                exemplo("documentos ausentes (E01-RN-01)", p -> {
+                    destinatario(p).remove("documentos");
+                    return p;
+                }, "destinatario.documentos:campo-obrigatorio"),
+                exemplo("documentos vazios (E01-RN-01)", p -> {
+                    destinatario(p).putArray("documentos");
+                    return p;
+                }, "destinatario.documentos:campo-obrigatorio"),
+                exemplo("endereços ausentes (E01-RN-01)", p -> {
+                    destinatario(p).remove("enderecos");
+                    return p;
+                }, "destinatario.enderecos:campo-obrigatorio"),
+                exemplo("endereços vazios (E01-RN-01)", p -> enderecos(p), "destinatario.enderecos:campo-obrigatorio"),
+                exemplo("valor_total_itens ausente (E01-RN-01)", p -> remover(p, "valor_total_itens"),
+                        "valor_total_itens:campo-obrigatorio"),
+                exemplo("valor unitário ausente (E01-RN-01, E01-RN-07)", p -> {
+                    item0(p).remove("valor_unitario");
+                    return p;
+                }, "itens[0].valor_unitario:campo-obrigatorio"),
+                exemplo("documento sem tipo (E01-RN-01)", p -> {
+                    ((ObjectNode) destinatario(p).get("documentos").get(0)).remove("tipo");
+                    return p;
+                }, "destinatario.documentos[0].tipo:campo-obrigatorio"),
+                exemplo("documento sem número (E01-RN-01)", p -> {
+                    ((ObjectNode) destinatario(p).get("documentos").get(0)).remove("numero");
+                    return p;
+                }, "destinatario.documentos[0].numero:campo-obrigatorio"),
+                exemplo("endereço sem finalidade (E01-RN-01)", p -> {
+                    ((ObjectNode) destinatario(p).get("enderecos").get(0)).remove("finalidade");
+                    return p;
+                }, "destinatario.enderecos[0].finalidade:campo-obrigatorio"),
+                exemplo("PF com regime nulo (E01-RN-03, E01-RN-10)", p -> {
+                    destinatario(p).putNull("regime_tributacao");
+                    return p;
+                }),
+                exemplo("PF com CPF e CNPJ (E01-RN-02)", p -> {
+                    ObjectNode cnpj = destinatario(p).withArray("documentos").addObject();
+                    cnpj.put("tipo", "CNPJ");
+                    cnpj.put("numero", CNPJ);
+                    return p;
+                }),
+                exemplo("CNPJ com 13 dígitos (E01-RN-02)", p -> documento(pj(p, "SIMPLES_NACIONAL"), "CNPJ", "49.695.613/0001-8"),
+                        "destinatario.documentos[0].numero:documento-invalido"),
+                exemplo("valor unitário como texto (E01-RN-08, E01-RN-07)", p -> {
+                    item0(p).put("valor_unitario", "50.00");
+                    return p;
+                }, "itens[0].valor_unitario:formato-invalido"),
+                exemplo("valor_frete como texto (E01-RN-08)", p -> p.put("valor_frete", "10"), "valor_frete:formato-invalido"),
+                exemplo("valor_total_itens como texto (E01-RN-08)", p -> p.put("valor_total_itens", "100.00"),
+                        "valor_total_itens:formato-invalido"),
+                exemplo("valor_total_itens com 3 casas (E01-RN-08)", p -> p.put("valor_total_itens", new BigDecimal("100.001")),
+                        "valor_total_itens:casas-decimais-excedidas"),
+                exemplo("sem tipo de pessoa, dígito verificador ainda conferido (E01-RN-10)", p -> {
+                    destinatario(documento(p, "CPF", "887.403.470-96")).remove("tipo_pessoa");
+                    return p;
+                }, "destinatario.tipo_pessoa:campo-obrigatorio", "destinatario.documentos[0].numero:documento-invalido"),
+                exemplo("sem tipo de pessoa, coerência e regime não conferidos (E01-RN-10)", p -> {
+                    destinatario(regime(documento(p, "CNPJ", CNPJ), "LUCRO_REAL")).remove("tipo_pessoa");
+                    return p;
+                }, "destinatario.tipo_pessoa:campo-obrigatorio"));
+    }
+
     @ParameterizedTest(name = "E01 validação {0}")
-    @MethodSource({"exemplosDeValidacao", "decisoesDaFase"})
+    @MethodSource({"exemplosDeValidacao", "decisoesDaFase", "regrasSemExemplo"})
     void e01ExemplosDeValidacao(String exemplo, UnaryOperator<ObjectNode> mudanca, List<String> esperadas) {
         assertEquals(ordenadas(esperadas), violacoes(mudanca.apply(PedidoBase.novo())));
     }
@@ -166,6 +231,14 @@ class ValidadorPedidoTest {
                 () -> validador.validar(documento(PedidoBase.novo(), "CPF", "887.403.470-96")));
 
         assertEquals("CPF inválido.", recusa.getViolacoes().get(0).getDetalhe());
+    }
+
+    @Test
+    void e01Rn02_cnpjInvalidoInformaOTipo() {
+        PedidoInvalidoException recusa = assertThrows(PedidoInvalidoException.class,
+                () -> validador.validar(documento(pj(PedidoBase.novo(), "SIMPLES_NACIONAL"), "CNPJ", "49.695.613/0001-81")));
+
+        assertEquals("CNPJ inválido.", recusa.getViolacoes().get(0).getDetalhe());
     }
 
     private List<String> violacoes(ObjectNode pedido) {

@@ -33,6 +33,7 @@ import static br.com.itau.geradornotafiscal.PedidoBase.pj;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,6 +82,8 @@ class GeradorNFControllerTest {
         enviar(mudanca.apply(PedidoBase.novo()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos[?(@.campo == '" + campo + "')].type").value("/erros/" + type));
+        // E01-RN-09: pedido recusado não gera nota nem aciona integração.
+        verifyNoInteractions(estoqueService, registroService, entregaService, financeiroService);
     }
 
     static Stream<Arguments> defeitosDeValidacao() {
@@ -133,6 +136,7 @@ class GeradorNFControllerTest {
                 .andExpect(jsonPath("$.campos[?(@.campo == 'valor_frete')].type").value("/erros/frete-negativo"))
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
+        verifyNoInteractions(estoqueService, registroService, entregaService, financeiroService);
         for (String dadoPessoal : List.of("Fulano", "887.403.470-95", "88740347095", "Av do Estado", "03105003")) {
             assertFalse(corpo.contains(dadoPessoal), dadoPessoal);
         }
