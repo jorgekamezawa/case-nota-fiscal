@@ -19,3 +19,7 @@ jobs:
 
       - name: Build e testes
         run: ./mvnw -B verify
+
+      # A imagem é gerada em todo PR para quebrar cedo; a publicação no ECR entra com a fase 7.
+      - name: Imagem
+        run: docker build -t gerador-nota-fiscal:${{ github.sha }} .

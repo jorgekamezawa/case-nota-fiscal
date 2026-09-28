@@ -38,7 +38,7 @@ As fases 1 a 5 estão concluídas; as fases 6 e 7 estão planejadas e decididas 
 - **Fase 5, validação na AWS:** o caminho do DynamoDB Streams até as filas, pelos EventBridge Pipes, não tem emulador. Localmente, o filtro do Pipe é conferido contra eventos reais do emulador; o Pipe real é validado no ambiente de demonstração da fase 7.
 - **Fase 5, latência sob carga:** a resposta não espera mais as integrações (0,7 s com 6 linhas de item na primeira chamada após a subida, antes cerca de 6,4 s), mas o teste de carga do p95 abaixo de 800 ms não foi feito nesta fase.
 - **Fase 6:** a API não exige autenticação.
-- **Fase 7:** o CI roda build e testes, mas ainda não há quality gate, imagem, infraestrutura em código nem deploy.
+- **Fase 7:** o CI roda build, testes e gera a imagem, mas ainda não há quality gate, publicação da imagem, infraestrutura em código nem deploy.
 
 ## Rodar localmente
 
@@ -54,6 +54,10 @@ docker compose up -d
 # aplicação com log em texto, telemetria no Grafana local e tabelas e filas criadas na subida
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
+# ou, no lugar do comando anterior, a imagem que vai para o ECS (Dockerfile na raiz; --network host no Linux)
+docker build -t gerador-nota-fiscal .
+docker run --rm --network host -e SPRING_PROFILES_ACTIVE=local gerador-nota-fiscal
+
 # um pedido de exemplo
 curl -s -H 'Content-Type: application/json' \
   -d @src/test/resources/payloads/teste-pf.json \
@@ -66,7 +70,7 @@ Enviar o mesmo arquivo de novo devolve a mesma nota, sem acionar os sistemas out
 - **Dashboard:** no Grafana, "Gerador de nota fiscal": requisições, latência p95 e p99, notas emitidas, recusas por motivo e duração de cada integração.
 - **Do log ao trace:** em Explore, rode no Loki `{service_name="gerador-nota-fiscal"}` e clique no `trace_id` de uma linha para abrir no Tempo o caminho da requisição. Cada integração tem trace próprio, com o `id_pedido` no log.
 - **Integrações:** sem Pipe no ambiente local, a reconciliação leva as tarefas às filas em cerca de 10 segundos; o dashboard mostra tarefas por resultado, pendentes, a mais antiga e mensagens na fila de erro.
-- **Alertas:** em Alerting, os 6 alertas de SLO e os 4 das integrações. Para ver o alerta da fila de erro, rode a aplicação com `--simulacao.entrega-fora-do-ar=true`: em cerca de 1 minuto, a entrega falha 5 vezes e o alerta dispara.
+- **Alertas:** em Alerting, os 6 alertas de SLO e os 4 das integrações. Para ver o alerta da fila de erro, rode a aplicação com `--simulacao.entrega-fora-do-ar=true`: em cerca de 2 minutos, a entrega falha 5 vezes e o alerta dispara.
 
 Para desligar: `docker compose down` (sem `-v`).
 

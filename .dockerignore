@@ -1,0 +1,8 @@
+target/
+.git/
+.claude/
+.vscode/
+docs/
+infra/
+observabilidade/
+*.md
