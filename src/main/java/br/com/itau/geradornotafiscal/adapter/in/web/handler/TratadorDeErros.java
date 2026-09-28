@@ -95,7 +95,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     private ResponseEntity<Object> problema(HttpStatus status, String codigo, String titulo, String detalhe,
                                                    List<RespostaProblema.CampoInvalido> campos) {
         if (status == HttpStatus.BAD_REQUEST) {
-            contarRecusa(PREFIXO_TYPE + codigo, campos);
+            registrarRecusa(PREFIXO_TYPE + codigo, campos);
         }
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -103,10 +103,12 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     }
 
     // Uma contagem por type distinto dos campos; sem campos (json-invalido), o type geral (F04-NF-07).
-    private void contarRecusa(String typeGeral, List<RespostaProblema.CampoInvalido> campos) {
+    private void registrarRecusa(String typeGeral, List<RespostaProblema.CampoInvalido> campos) {
         List<String> types = campos.isEmpty()
                 ? List.of(typeGeral)
                 : campos.stream().map(RespostaProblema.CampoInvalido::type).distinct().toList();
         types.forEach(type -> meterRegistry.counter("recusas", "type", type).increment());
+        // Sem id_pedido: na recusa o corpo pode nem ser legível (F04-NF-04).
+        log.atInfo().addKeyValue("status", HttpStatus.BAD_REQUEST.value()).addKeyValue("types", types).log("Pedido recusado");
     }
 }
