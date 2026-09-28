@@ -24,7 +24,7 @@ Spec: [spec.md](spec.md). Pacotes do [ADR-0003](../../03-engenharia/adr/0003-arq
 - **Classes:**
   - `p.application.port.in.GerarNotaFiscalUseCase`: recebe o pedido de domínio, já válido na etapa 1;
   - `p.application.port.out`: `RegistroPort`, `EstoquePort`, `EntregaPort` e `FinanceiroPort`;
-  - `p.application.usecase.GerarNotaFiscalService` (`@Service`), que substitui a `GeradorNotaFiscalServiceImpl`: confere a etapa 2 pelo domínio, calcula, monta a nota e aciona as portas.
+  - `p.application.usecase.GerarNotaFiscalUseCaseImpl` (`@Service`), que implementa a `GerarNotaFiscalUseCase` e substitui a `GeradorNotaFiscalServiceImpl`: confere a etapa 2 pelo domínio, calcula, monta a nota e aciona as portas.
 - **Testes:** os do serviço atual, com as portas por mock.
 
 ### T-04. Adaptadores

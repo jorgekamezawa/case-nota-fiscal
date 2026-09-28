@@ -17,7 +17,7 @@ O que pesa: regra testável sem infraestrutura; trocar integração ou banco sem
 ## Consequências
 - **Ganhos:** regras testáveis sem Spring e sem as esperas simuladas; trocar uma integração ou o banco não toca o domínio.
 - **Custos:** mais pacotes e interfaces; mapeamento entre o contrato JSON e o domínio.
-- **Passa a ser obrigatório:** o domínio não depende de Spring, HTTP nem banco, exceto as anotações de estereótipo do Spring (`@Component`, `@Service`), que só declaram beans; um teste de arquitetura (ArchUnit) no build quebra quando essa regra é violada. Mapeamento só onde o formato externo difere do domínio. A estrutura de pacotes, com base `br.com.itau.geradornotafiscal`:
+- **Passa a ser obrigatório:** o domínio não depende de Spring, HTTP nem banco, exceto as anotações de estereótipo do Spring (`@Component`, `@Service`), que só declaram beans, e o Lombok, que só gera código na compilação; um teste de arquitetura (ArchUnit) no build quebra quando essa regra é violada. Mapeamento só onde o formato externo difere do domínio. A estrutura de pacotes, com base `br.com.itau.geradornotafiscal`:
 
 | Pacote | Responsabilidade |
 |---|---|

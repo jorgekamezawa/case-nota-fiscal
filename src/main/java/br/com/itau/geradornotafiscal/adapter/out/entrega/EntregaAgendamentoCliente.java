@@ -1,0 +1,23 @@
+package br.com.itau.geradornotafiscal.adapter.out.entrega;
+
+import br.com.itau.geradornotafiscal.domain.entity.NotaFiscal;
+import org.springframework.stereotype.Component;
+
+@Component
+public class EntregaAgendamentoCliente {
+    public void criarAgendamentoEntrega(NotaFiscal notaFiscal) {
+
+            try {
+                //Simula o agendamento da entrega
+                if(notaFiscal.itens().size() > 5){
+                    /* Aqui está o problema de performance do aplicacao para pedidos com mais de 5 itens
+                        Se voce chegou ate aqui basta remover esse valor de 5s para 'solucionar' o misterio
+                    * */
+                    Thread.sleep(5000);
+                }
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+    }
+}
