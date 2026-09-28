@@ -1,5 +1,7 @@
 package br.com.itau.geradornotafiscal.model;
 
+import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,16 +16,16 @@ import lombok.*;
 @NoArgsConstructor
 public class Pedido {
 	 @JsonProperty("id_pedido")
-	    private int idPedido;
+	    private Long idPedido;
 
 	    @JsonProperty("data")
 	    private LocalDate data;
 
 	    @JsonProperty("valor_total_itens")
-	    private double valorTotalItens;
+	    private BigDecimal valorTotalItens;
 
 	    @JsonProperty("valor_frete")
-	    private double valorFrete;
+	    private BigDecimal valorFrete;
 
 	    @JsonProperty("itens")
 	    private List<Item> itens;

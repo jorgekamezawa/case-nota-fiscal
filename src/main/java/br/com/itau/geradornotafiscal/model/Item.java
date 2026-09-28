@@ -1,5 +1,7 @@
 package br.com.itau.geradornotafiscal.model;
 
+import java.math.BigDecimal;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,7 +20,7 @@ public class Item {
 	    private String descricao;
 
 	    @JsonProperty("valor_unitario")
-	    private double valorUnitario;
+	    private BigDecimal valorUnitario;
 
 	    @JsonProperty("quantidade")
 	    private int quantidade;
